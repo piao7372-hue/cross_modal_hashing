@@ -1,0 +1,100 @@
+dataset_name: mirflickr25k
+
+raw:
+  root: data/raw/mirflickr25k
+
+canonical_sources:
+  image_root: data/raw/mirflickr25k/mirflickr
+  image_glob: im*.jpg
+
+  text_root: data/raw/mirflickr25k/mirflickr/meta/tags_raw
+  text_glob: tags*.txt
+
+  label_root: data/raw/mirflickr25k/mirflickr25k_annotations_v080
+  label_glob: "*.txt"
+  label_exclude:
+    - README.txt
+  annotation_source_version: v080
+
+non_canonical_sources:
+  - data/raw/mirflickr25k/mirflickr/meta/tags
+  - data/raw/mirflickr25k/mirflickr/meta/exif
+  - data/raw/mirflickr25k/mirflickr/meta/exif_raw
+  - data/raw/mirflickr25k/mirflickr/meta/license
+  - data/raw/mirflickr25k/mirflickr/doc/common_tags.txt
+  - data/raw/mirflickr25k/mirflickr/doc/owner_ids.txt
+
+identity:
+  key: sample_id
+  id_type: int
+  image_filename_regex: "^im(?P<id>\\d+)\\.jpg$"
+  text_filename_template: "tags{ID}.txt"
+  id_range:
+    min: 1
+    max: 25000
+  strict_full_coverage: false
+
+text:
+  canonical_source: data/raw/mirflickr25k/mirflickr/meta/tags_raw
+  preserve_raw_content: true
+  normalization: none
+
+  empty_text:
+    keep: true
+    drop_on_empty: false
+    flag_field: text_empty
+
+labels:
+  canonical_source_glob: data/raw/mirflickr25k/mirflickr25k_annotations_v080/*.txt
+  annotation_source_version: v080
+
+  namespaces:
+    potential_labels:
+      selector: "files_without__r1_suffix"
+      authoritative_role: "parallel_independent_namespace_not_single_master"
+
+    relevant_labels_r1:
+      selector: "files_with__r1_suffix"
+      authoritative_role: "parallel_independent_namespace_not_single_master"
+
+  source_level_role: "canonical_label_source"
+  malformed_annotation_file_policy: hard_fail
+  duplicate_lines_within_same_annotation_file_policy: deduplicate_and_record
+
+validation:
+  enforce_dataset_name_match: true
+  enforce_canonical_image_exists: true
+  enforce_canonical_text_resolution: true
+  enforce_annotation_readability: true
+  expected_total_rows: 25000
+  expected_clean_rows: 25000
+  expected_drop_rows: 0
+  expected_empty_text_rows: 2128
+  expected_drop_reason_breakdown: {}
+  acceptance_coverage_check:
+    enabled: true
+    based_on_expected_counts: true
+
+duplicate_policy:
+  primary_alignment_key_conflict: hard_fail
+  annotation_in_file_duplicate_rows: deduplicate_and_record
+
+drop_reasons:
+  allowed:
+    - missing_image
+    - invalid_image_id
+    - missing_text_file
+    - text_parse_failure
+
+outputs:
+  processed_root: data/processed/mirflickr25k
+  outputs_root: outputs/mirflickr25k
+
+  clean_manifest: data/processed/mirflickr25k/clean_manifest.jsonl
+  dropped_samples: data/processed/mirflickr25k/dropped_samples.jsonl
+  clean_stats: outputs/mirflickr25k/clean_stats.json
+  cleaning_report: outputs/mirflickr25k/cleaning_report.md
+
+open_items:
+  - include_exif_license_doc_in_manifest_fields: TO_BE_CONFIRMED
+  - extra_id_space_sanity_checks_beyond_expected_count_validation: TO_BE_CONFIRMED
