@@ -1,0 +1,32 @@
+dataset_name: nuswide
+
+expected_total_rows: 269648
+expected_clean_rows_after_preconfirmed_ambiguous_drop: 269642
+
+canonical_sources:
+  all_tags: data/raw/nuswide/NUS_WID_Tags/All_Tags.txt
+  all_tags_81: data/raw/nuswide/NUS_WID_Tags/AllTags81.txt
+  all_tags_1k: data/raw/nuswide/NUS_WID_Tags/AllTags1k.txt
+  all_labels_dir: data/raw/nuswide/Groundtruth/AllLabels
+  labels_pattern: Labels_*.txt
+  concepts_list: data/raw/nuswide/ConceptsList/Concepts81.txt
+  images_dir: data/raw/nuswide/images
+
+disabled_sources:
+  - data/raw/nuswide/Groundtruth/TrainTestLabels
+  - data/raw/nuswide/legacy_subset
+
+preconfirmed_ambiguous_ids:
+  - "1100787682"
+  - "2728487708"
+  - "702409954"
+
+safe_duplicate_resolution_policy: image_filename_asc_then_metadata_row_index_asc
+drop_ambiguous_duplicate_ids: true
+
+filtering:
+  enable_top10_filter: true
+  top_k_categories: 10
+  category_rank_metric: positive_frequency
+  multi_label_policy: union_any
+  expected_filtered_rows_from_ra: 186577

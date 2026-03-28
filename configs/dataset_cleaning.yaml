@@ -1,0 +1,13 @@
+output:
+  processed_root: data/processed
+  outputs_root: outputs
+
+run:
+  dry_run_default: false
+  strict_validation: true
+  log_level: INFO
+
+drop_policies:
+  drop_missing_image: true
+  drop_parse_failure: true
+  drop_ambiguous_duplicate_ids: true
