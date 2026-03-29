@@ -1,4 +1,4 @@
-# Feature Cache Contract (Stage: Feature Extraction / Feature Cache Layer)
+﻿# Feature Cache Contract (Stage: Feature Extraction / Feature Cache Layer)
 
 ## Scope
 This document defines the output contract of the feature extraction stage only.
@@ -6,6 +6,8 @@ Out of scope:
 1. semantic similarity matrix (`S1/S2/S_final`)
 2. SCH-KANH backbone
 3. loss, training, evaluation
+
+For semantic-layer contract, see `docs/semantic_cache_contract.md`.
 
 ## Fixed Defaults
 1. default encoder: `OpenAI CLIP / openai/clip-vit-base-patch32`
@@ -60,4 +62,3 @@ Optional file:
 6. normalization type/epsilon
 7. empty text policy summary
 8. image reuse summary (`U`, mapping filename, unique cache saved or not)
-
