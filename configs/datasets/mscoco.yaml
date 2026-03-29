@@ -1,0 +1,69 @@
+dataset_name: mscoco
+
+expected_total_rows: 616767
+expected_clean_rows_after_preconfirmed_ambiguous_drop: TO_BE_FINALIZED_AFTER_DROP_PROFILE
+
+raw:
+  root: data/raw/mscoco
+
+canonical_sources:
+  images_train_dir: data/raw/mscoco/train2014/train2014
+  images_val_dir: data/raw/mscoco/val2014/val2014
+  captions_train_json: data/raw/mscoco/annotations_trainval2014/annotations/captions_train2014.json
+  captions_val_json: data/raw/mscoco/annotations_trainval2014/annotations/captions_val2014.json
+  instances_train_json: data/raw/mscoco/annotations_trainval2014/annotations/instances_train2014.json
+  instances_val_json: data/raw/mscoco/annotations_trainval2014/annotations/instances_val2014.json
+
+non_canonical_sources:
+  - data/raw/mscoco/test2014
+  - data/raw/mscoco/image_info_test2014/annotations/image_info_test2014.json
+  - data/raw/mscoco/annotations_trainval2014/annotations/person_keypoints_train2014.json
+  - data/raw/mscoco/annotations_trainval2014/annotations/person_keypoints_val2014.json
+
+identity:
+  primary_alignment_key: "(split,image_id)"
+  row_unit: per-image-caption
+  row_unique_id: "mscoco:<split>:<image_id>:<caption_ann_id>"
+
+text:
+  preserve_raw_content: true
+  normalization: none
+  empty_text:
+    keep: true
+    drop_on_empty: false
+    flag_field: text_empty
+  missing_text_mapping: drop
+
+labels:
+  representation: class_index_list
+  empty_by_source_policy: keep_with_flags
+  has_instances_field: has_instances
+  labels_empty_by_source_field: labels_empty_by_source
+
+validation:
+  expected_total_rows: 616767
+  expected_caption_image_coverage_missing_train: 0
+  expected_caption_image_coverage_missing_val: 0
+  expected_images_without_instances_train: 702
+  expected_images_without_instances_val: 367
+  expected_categories_count: 80
+
+drop_reasons:
+  allowed:
+    - missing_image
+    - invalid_image_identity
+    - missing_caption
+    - caption_parse_failure
+    - instances_parse_failure
+    - alignment_key_conflict
+
+outputs:
+  processed_root: data/processed/mscoco
+  outputs_root: outputs/mscoco
+  clean_manifest: data/processed/mscoco/clean_manifest.jsonl
+  dropped_samples: data/processed/mscoco/dropped_samples.jsonl
+  clean_stats: outputs/mscoco/clean_stats.json
+  cleaning_report: outputs/mscoco/cleaning_report.md
+
+open_items:
+  - reference_only_metadata_mirroring: TO_BE_CONFIRMED

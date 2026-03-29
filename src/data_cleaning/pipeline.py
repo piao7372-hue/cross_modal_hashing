@@ -6,11 +6,13 @@ from typing import Type
 from .base_cleaner import BaseCleaner
 from .config import load_dataset_config, load_runtime_config
 from .datasets.mirflickr import MIRFlickr25KCleaner
+from .datasets.mscoco import MSCOCOCleaner
 from .datasets.nuswide import NUSWIDECleaner
 from .records import CleaningStats
 
 CLEANER_REGISTRY: dict[str, Type[BaseCleaner]] = {
     "mirflickr25k": MIRFlickr25KCleaner,
+    "mscoco": MSCOCOCleaner,
     "nuswide": NUSWIDECleaner,
 }
 
