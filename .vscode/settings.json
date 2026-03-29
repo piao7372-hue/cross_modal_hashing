@@ -1,0 +1,5 @@
+{
+  "python.defaultInterpreterPath": "C:\\Users\\ASVS\\anaconda3\\envs\\deeplearning\\python.exe",
+  "python.condaPath": "C:\\Users\\ASVS\\anaconda3\\condabin\\conda.bat",
+  "python.terminal.activateEnvironment": true
+}
