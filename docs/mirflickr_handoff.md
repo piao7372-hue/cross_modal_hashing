@@ -33,7 +33,7 @@
 - `empty_text_rows = 2128`
 - `annotation dedup statistics inside label files = 0`
 
-## 5. 当前仍未完成的人工验收项
+## 5. 人工验收状态（闭环已完成）
 - head/middle/tail 样本的人审一致性抽检已完成。
   - 取样基准：按 `data/processed/mirflickr25k/clean_manifest.jsonl` 的当前文件顺序抽样。
   - 固定位置：第 `1 / 12500 / 25000` 条。
@@ -47,7 +47,7 @@
     - `text_empty` 与实际一致
     - annotation 映射可回查且命名空间一致
     - 未发现 alignment 异常
-- dropped 样本抽检：当前不适用（full run `dropped_records=0`），待未来出现 dropped 样本时补检（still_open）。
+- dropped 样本抽检：当前不适用（full run `dropped_records=0`），保留为 future-triggered / still_open 项，待未来出现 dropped 样本时补检。
 
 ## 6. 当前明确不能做的事
 - 不进入 split。
