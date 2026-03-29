@@ -1,0 +1,53 @@
+output:
+  processed_root: data/processed
+
+runtime:
+  device: cuda:0
+  dtype: float32
+  deterministic: true
+  seed: 0
+  image_batch_size: 64
+  text_batch_size: 256
+  huggingface_cache_dir: data/processed/_hf_cache
+
+encoder:
+  family: openai_clip
+  model_name: openai/clip-vit-base-patch32
+  text_tokenizer: CLIPTokenizerFast
+  text_max_length: 77
+  image_preprocess:
+    color_mode: RGB
+    resize_shortest: 224
+    crop_size: 224
+    interpolation: bicubic
+  normalize:
+    type: l2
+    epsilon: 1.0e-12
+
+data_views:
+  nuswide:
+    default_view: canonical
+    views:
+      canonical: data/processed/nuswide/clean_manifest.jsonl
+      ra_top10: data/processed/nuswide_ra_top10/filtered_manifest.jsonl
+  mirflickr25k:
+    default_view: canonical
+    views:
+      canonical: data/processed/mirflickr25k/clean_manifest.jsonl
+  mscoco:
+    default_view: canonical
+    views:
+      canonical: data/processed/mscoco/clean_manifest.jsonl
+
+cache:
+  feature_cache_dirname: feature_cache
+  save_row_aligned_image_matrix: true
+  save_unique_image_cache: auto
+  sample_index_filename: sample_index.jsonl
+  meta_filename: meta.json
+
+contracts:
+  sample_index_basis: manifest_non_empty_line_order_zero_based
+  forbid_row_index_as_position: true
+  empty_text_policy: keep_and_encode_empty_string
+  default_nus_input_view: canonical

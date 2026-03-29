@@ -1,0 +1,1213 @@
+
+
+===== PAGE 1 =====
+ 
+Contents lists available at ScienceDirect
+Knowledge-Based Systems
+journal homepage: www.elsevier.com/locate/knosys  
+Radial Adaptive Node Embedding Hashing for cross-modal retrieval
+Yunfei Chen a
+ , Renwei Xia b, Zhan Yang a,∗, Jun Long a,∗
+a Big Data Institute, Central South University, ChangSha, Hunan, 410000, China
+b School of Computer Science and Engineering, Central South University, ChangSha, Hunan, 410000, China
+A R T I C L E  I N F O
+Keywords:
+Cross-modal retrieval
+Semantic meta-similarity
+Radial adaptive hybrid
+Broadcasting node embedding
+Fast Kolmogorov–Arnold
+ A B S T R A C T
+With the rapid growth of multimedia data on social networks, efficient and accurate cross-modal retrieval has 
+become essential. Cross-modal hashing methods offer advantages such as fast retrieval speed and low storage 
+cost. However, unsupervised deep cross-modal hashing methods often struggle with semantic misalignment and 
+noise, limiting their effectiveness in capturing fine-grained relationships across modalities. To address these 
+challenges, we propose Radial Adaptive Node Embedding Hashing (RANEH), designed to enhance semantic 
+consistency and retrieval efficiency. Specifically, the semantic meta-similarity construction module reconstructs 
+identity semantics using a similarity matrix, ensuring that hash codes retain modality-specific features. The 
+radial adaptive hybrid coding method employs FastKAN as an encoder to map features into a shared hash 
+space, maintaining semantic consistency across modalities. Lastly, the broadcasting node embedding unit 
+leverages the Fast Kolmogorov–Arnold network to capture deep modality relationships, improving semantic 
+alignment and node embedding accuracy. Experiments on the NUS-WIDE, MIRFlickr, and MSCOCO datasets 
+show that RANEH method consistently outperforms state-of-the-art unsupervised cross-modal hashing methods 
+in accuracy and efficiency. The codes are available at https://github.com/YunfeiChenMY/RANEH.
+1. Introduction
+With the rapid development of multimodal data, achieving ac-
+curate cross-modal retrieval in large-scale heterogeneous data [1–4] 
+has become a critical research challenge. Traditional unimodal re-
+trieval methods fail to capture relationships between heterogeneous 
+modalities, leading to weak semantic alignment and limited retrieval 
+performance [5]. Various cross-modal retrieval paradigms have been 
+developed to bridge this gap, each aiming to model inter-modal rela-
+tionships more effectively. A fundamental approach is representation 
+learning, where methods project different modalities into a shared 
+feature space to enhance semantic alignment. While deep learning 
+techniques such as contrastive learning [6] and large-scale pretrain-
+ing [7] have demonstrated remarkable performance, they often require 
+extensive labeled data and high computational resources. Alternatively, 
+graph-based retrieval [8,9] captures structured relationships between 
+modalities but faces scalability challenges on large datasets. Recently, 
+self-supervised methods [10] have gained traction by reducing depen-
+dency on manual annotations, yet issues like false negative contam-
+ination remain unsolved. Among these paradigms, cross-modal hash-
+ing [11–13] has emerged as a highly efficient solution due to its ability 
+to transform high-dimensional multimodal data into compact binary 
+codes. By reducing storage and computational costs, hashing-based 
+methods improve retrieval efficiency while maintaining competitive 
+∗ Corresponding authors.
+E-mail addresses: yunfeichen@csu.edu.cn (Y. Chen), 8208231310@csu.edu.cn (R. Xia), zyang22@csu.edu.cn (Z. Yang), junlong@csu.edu.cn (J. Long).
+accuracy. Recent advances in machine learning, particularly deep learn-
+ing, have significantly enhanced the representation capacity of hashing 
+techniques [14–16], making them a key focus in cross-modal retrieval 
+research.
+Extended cross-modal hashing methods are usually classified into 
+supervised and unsupervised learning methods, and supervised cross-
+modal hashing [17,18] requires a large amount of high-quality labeled 
+data to oversee the hash function learning process. However, obtaining 
+high-quality labeled data is very expensive and time-consuming, and 
+guiding the learning of the hash function by labels also leads to its poor 
+adaptability, which cannot achieve good training results in the case 
+of inadequate or sparse labeled data. As a result, cross-modal retrieval 
+with missing labels remains a critical challenge that demands further 
+attention. Cross-modal hashing with Missing Labels (CMHML) [19] 
+predicts missing labels by leveraging multimodal correlations and la-
+tent representation decomposition. It preserves label correlations and 
+refines hash learning with a similarity matrix, improving retrieval 
+under missing labels. However, its reliance on label inference increases 
+computational overhead and may introduce noise when labels are 
+imbalanced, compromising model robustness. In contrast, unsupervised 
+cross-modal hashing [20,21] does not rely on manually labeled infor-
+mation but instead automatically explores latent correlations within the 
+https://doi.org/10.1016/j.knosys.2025.113522
+Received 18 January 2025; Received in revised form 30 March 2025; Accepted 6 April 2025
+Knowledge-Based Systems 319 (2025) 113522 
+Available online 30 April 2025 
+0950-7051/© 2025 Elsevier B.V. All rights are reserved, including those for text and data mining, AI training, and similar technologies. 
+
+===== PAGE 2 =====
+Y. Chen et al.
+Fig. 1. The difference in feature propagation learning between FKAN and MLP. The MLP propagates information through a fixed-weight matrix, where node connections are 
+predetermined and static. In contrast, the KAN uses node-weighted summation and dynamic edge activation functions to adapt the information propagation process. This flexibility 
+allows FKAN to capture the underlying relationships in the data better, making it more effective for complex cross-modal tasks than MLP.
+data and captures the essential properties of multimodal data. Since 
+it does not depend on manual labels, unsupervised methods are more 
+readily applicable to large-scale datasets [22] (see Fig.  1).
+Although unsupervised cross-modal hashing does not rely on labeled 
+data, it still faces two significant challenges: (1) Insufficient sensitivity 
+and robustness to data quality. Unsupervised methods are more sensitive 
+to noise and missing information in the data, which can lead to a 
+lack of stability in the generated hash code. In addition, it is more 
+challenging to maintain semantic similarity and relative relationships 
+between data points in mapping data into binary hash codes, which 
+directly affects the consistency of retrieval accuracy and effectiveness, 
+especially when dealing with complex multimodal data. Several meth-
+ods have been proposed to enhance the robustness of the model. For 
+example, Hypergraph-Enhanced Hashing (HEH) [23], which optimizes 
+the similarity matrix by leveraging frequency-based similarity calcula-
+tions, and Fast Unsupervised Cross-Modal Hashing (FUCH) [24], which 
+employs semantic-aware collective matrix factorization to improve fea-
+ture discrimination and mitigate outliers. However, these methods 
+rely on handcrafted similarity metrics or static latent representations. 
+For instance, HEH’s frequency-based approach assumes uniform data 
+distributions, making it less effective in noisy or imbalanced scenarios. 
+(2) Insufficient cross-modal interactions and high computational complexity. 
+The heterogeneity of different modalities makes it challenging to align 
+and interact in a shared semantic space while preserving informa-
+tion integrity. Existing methods [25,26] often utilize Graph Convo-
+lutional Networks to enhance cross-modal interactions and maintain 
+strong associative relationships. However, these approaches suffer from 
+quadratic complexity when modeling pairwise relationships. Even ad-
+vanced techniques like CMHML [19] require iterative label prediction, 
+limiting scalability for large datasets. Thus, optimizing computational 
+efficiency while improving performance remains a key challenge.
+To address these challenges, this paper proposes a novel unsu-
+pervised cross-modal hashing retrieval method, Radial Adaptive Node 
+Embedding Hashing (RANEH). To improve sensitivity and robustness 
+to data quality, the RANEH method ensures that the generated hash 
+codes are aligned with the input modality features, effectively capturing 
+meaningful identity semantics while mitigating the impact of noise 
+or incomplete data, thereby enhancing retrieval performance. Further-
+more, to overcome high computational complexity, the RANEH method 
+employs FastKAN as an encoder, integrating adaptability with a radial 
+structure to facilitate efficient feature learning, ensuring semantic con-
+sistency across modalities while preserving the identity semantics of the 
+data. Finally, by fully leveraging the Fast Kolmogorov–Arnold Network 
+(FKAN), the RANEH method dynamically adjusts data distributions, op-
+timizes cross-modal alignment, and further strengthens the interaction 
+of cross-modal semantic features. The main contributions of this paper 
+are as follows.
+∙ The semantic similarity construction method is optimized to 
+reconstruct identity semantics using a similarity matrix, effec-
+tively preserving modality-specific features in hash codes and 
+enhancing cross-modal retrieval accuracy.
+∙ The radial adaptive hybrid coding method is proposed to map 
+features from different modalities into a shared hash space, 
+ensuring semantic consistency and preserving identity seman-
+tics while mitigating cross-modal heterogeneity and optimizing 
+computational complexity.
+∙ The Fast Kolmogorov–Arnold network captures deep modality 
+relationships and enhances semantic alignment, generating ro-
+bust embeddings that further preserve identity semantics across 
+modalities.
+The paper is organized as follows: Section 2 reviews recent advance-
+ments in supervised and unsupervised cross-modal hashing methods. 
+Section 3 details the RANEH method, including its framework and 
+component analysis. Section 4 presents experimental evaluations of the 
+RANEH method, comparing it with baseline methods and providing 
+ablation experiments, convergence analysis, computational cost analy-
+sis, t-SNE visualization and case study to demonstrate its effectiveness. 
+Finally, Section 5 summarizes the contributions and suggests directions 
+for future research.
+2. Related work
+Cross-modal hashing methods are mainly categorized into super-
+vised and unsupervised cross-modal retrieval methods.
+2.1. Supervised cross-modal hashing
+Supervised cross-modal hashing [27–29] methods develop models 
+to oversee the generation of binary hash codes that maintain intra- 
+and inter-modal semantic consistency by exploiting explicit labeling 
+information or similarity relations between pairs of samples. It ensures 
+that samples from different modalities but with the same semantics 
+produce similar hash codes. Individual mapping and asymmetric dual 
+supervision for discrete cross-modal cleansing (IMADS) [30] combines 
+modality-specific information with shared information, utilizing an 
+asymmetric dual supervision framework to generate discriminative 
+hash codes and reduce information loss through discrete optimization. 
+Supervised Contrastive Discrete Hashing (SCDH) [31] extends unsu-
+pervised contrastive methods to a supervised setting, leveraging class 
+Knowledge-Based Systems 319 (2025) 113522 
+2 
+
+===== PAGE 3 =====
+Y. Chen et al.
+labels to select positive and negative samples and directly generating 
+discrete hash codes, enhancing feature representation and reducing 
+quantization error. Efficient Supervised Graph Embedding Hashing (ES-
+GEH) [32] effectively minimizes quantization errors by combining class 
+label-based semantic embedding and graph embedding and avoids the 
+explicit computation of the graph Laplacian through intermediate de-
+composition. It introduces an iterative discrete optimization algorithm 
+to enhance efficiency. Graph Convolutional Semi-Supervised Cross-
+Modal Hashing (GCSCH) [33] reduces label dependence by generat-
+ing pseudo-labels through consistency regularization, using a fusion 
+network and GCN to capture semantic information, and applying a 
+teacher–student learning scheme for knowledge transfer. Dual Semantic 
+Fusion Hashing (DSFH) [34] explores cluster-level semantic relation-
+ships in multi-label data by constructing fine-grained semantic simi-
+larity, combines modality-specific representations with consensus hash 
+codes, and fuses coarse-grained and fine-grained semantics to enhance 
+hash code discrimination.
+However, these methods still face key limitations. First, they rely 
+heavily on accurate and large-scale labeled data, which limits their 
+performance in noisy or imbalanced scenarios. Second, quantization 
+errors remain a challenge that affects hash code quality. Third, most 
+methods fail to capture the complex semantic relationships across 
+modalities, hindering fine-grained alignment. Finally, the scalability 
+of these approaches becomes an issue when handling large datasets. 
+In conclusion, these supervised hashing methods [13,35] significantly 
+enhance the accuracy and robustness of cross-modal hashing by incor-
+porating label information. Experimental results demonstrate that these 
+methods perform well on large-scale datasets and provide effective 
+solutions for complex cross-modal retrieval tasks. Future research could 
+explore ways to integrate multimodal information better and improve 
+the generalization capability of hash codes without increasing compu-
+tational complexity, addressing the growing demands of multimodal 
+data.
+2.2. Unsupervised cross-modal hashing
+Unsupervised cross-modal hashing learns valid hash codes from 
+unlabeled multimodal data by exploiting the intrinsic structure and 
+similarity between modalities without relying on external labels. Many 
+methods focus on similarity learning, utilizing graph structures and 
+matrix decomposition to establish semantic associations across modal-
+ities. Unsupervised Cross-Modal Hashing With Modality-Interaction 
+(UCHM) [36] method enhances modality interaction, optimizes a hash-
+similarity-friendly loss function to generate a high-quality similarity 
+matrix, and introduces a bit-selection module during hashing net-
+work training to produce high-quality binary codes. Unsupervised Dual 
+Deep Hashing (UDDH) [37] method extracts deep features through a 
+dual-deep hashing architecture and collaboratively encodes the binary 
+codes with public semantic indices and modality content codes, effec-
+tively bridging the semantic and heterogeneous gaps. Structure-Aware 
+Contrastive Hashing (SACH) [38] combines high-dimensional and dis-
+criminative representations learned by the network to construct a richer 
+cross-modal semantic similarity matrix. It also designs a structure-
+aware alignment network to reduce the disparity between hetero-
+geneous data sources, thereby improving the performance of unsu-
+pervised cross-modal retrieval. Unsupervised Contrastive Cross-modal 
+Hashing (UCCH) [6] enables learnable hashing operations through a 
+momentum optimizer, avoiding binary relaxation. At the same time, the 
+proposed Cross-modal Ranking Learning Loss leverages a global strat-
+egy to mitigate the impact of False Negative Pairs, improving retrieval 
+performance. Hugs Bring Double Benefits: Unsupervised Cross-Modal 
+Hashing with Multi-granularity Aligned Transformers (UCMH) [39] 
+proposes a transformer-based multi-granularity learning framework 
+that bridges modality gaps by capturing implicit semantics through 
+fine-grained alignment and local embeddings. Furthermore, the pro-
+posed differentiable optimization quantization and the extension of the 
+hugging+ enhance retrieval performance and query results.
+Existing unsupervised cross-modal hashing methods have signifi-
+cantly enhanced cross-modal semantic alignment and retrieval per-
+formance through techniques such as graph structures, matrix fac-
+torization, and contrastive learning, demonstrating robust data pro-
+cessing capabilities and innovative potential. However, unsupervised 
+hashing still faces several challenges. Although recent methods [40,
+41] capture semantic associations in multimodal data through matrix 
+factorization, they exhibit certain limitations in modeling high-order 
+semantic relationships. Additionally, [42] improves retrieval perfor-
+mance by constructing multimodal fusion graphs, but their static graph 
+structures may suffer from insufficient robustness under complex data 
+distributions. To address these challenges, this paper enhances model 
+robustness by optimizing the construction of the similarity matrix. 
+Additionally, we propose an innovative encoder that effectively cap-
+tures local features while preserving the identity semantics of different 
+modalities. Meanwhile, FKAN is introduced to capture higher-order 
+cross-modal joint semantic representations, addressing the limitations 
+of existing methods in modeling high-order semantic relationships and 
+ultimately improving retrieval performance.
+3. Methodology
+In this paper, we introduce a method called Radial Adaptive Node 
+Embedding Hashing (RANEH), with its detailed architecture illustrated 
+in Fig.  2.
+3.1. Notations
+We begin by formulating the notations used in this paper. Specif-
+ically, we use bold capital letters to denote the matrix. The element 
+located in the 𝑖th row and the 𝑗th column of 𝐒 is denoted as 𝐒𝑖𝑗 , and 𝜎(⋅)
+represents a SiLU activation function. Each element 𝐒𝑖𝑗 of the matrix 𝐒
+represents the similarity between the 𝑖th and 𝑗th samples. The term 
+cos() denotes the cosine similarity, and ‖ ⋅ ‖𝐹 represents the Frobenius 
+norm of a matrix. 𝐗𝐼 ∈ R𝑛×𝑑𝐼 and 𝐗𝑇 ∈ R𝑛×𝑑𝑇  represent images 
+and text, respectively, where 𝑛 represents the number of samples, and 
+𝑑𝐼 and 𝑑𝑇 indicate the feature dimensions of images and text. FKAN 
+stands for Fast Kolmogorov–Arnold Network, and FKAN(⋅) represents 
+its output. The ultimate goal is to generate a unified hash code 𝐁 ∈
+{−1, 1}𝑛×𝑟 by learning the hash functions 𝑓𝐼 (𝐗𝐼 ; 𝜃𝐼 ) and 𝑓𝑇 (𝐗𝑇 ; 𝜃𝑇 ) of 
+two heterogeneous modes, where 𝑟 denotes the hash code length. In the 
+following parts of our method, we will focus on describing the construc-
+tion of Semantic Meta-Similarity Construction (SMSC), Radial Adaptive 
+Hybrid Coding (RAHC), Broadcasting Node Embedding (BNE), Hash 
+Code Learning and Hash Function Learning.
+3.2. Model framework
+3.2.1. FastKAN workflow
+The RANEH method introduces FKAN, which integrates the Radial 
+Basis Function (RBF) transformation and the adaptive SplineLinear 
+combination. Unlike traditional fully connected networks that rely on 
+fixed activation functions, FKAN flexibly captures complex nonlin-
+ear relationships, enhancing feature representation and generalization 
+while reducing computational complexity and accelerating training. 
+FKAN consists of two key components: the RBF network and the 
+SplineLinear layer. The RBF network constructs a parameterized grid 
+and applies radial basis transformations to input features. During the 
+feature transformation process, FKAN first creates a parameterized grid
+G: 
+𝐆 = {𝑔1, 𝑔2, … , 𝑔𝑘}, (1)
+where 𝑘 is the number of grid points. The grid values in G are extracted 
+from the original data 𝐗𝐼 (or 𝐗𝑇 ). We take the image features 𝐗𝐼 ∈
+R𝑛×𝑑𝐼 and text features 𝐗𝑇 ∈ R𝑛×𝑑𝑇  as input to the FKAN network. 
+By applying a Radial Basis Function (RBF) mapping, each feature 
+Knowledge-Based Systems 319 (2025) 113522 
+3 
+
+===== PAGE 4 =====
+Y. Chen et al.
+Fig. 2. The RANEH method’s framework contains five primary components: semantic meta-similarity, radial adaptive hybrid coding, broadcasting node embedding, hash code 
+learning and hash function learning.
+efficiently interacts with all grid points, generating a new feature 
+representation through the transformation: 
+𝝓𝑎(𝐗∗
+𝑖 ) = exp
+(
+−
+(𝐗∗
+𝑖 − 𝑔𝑎
+2ℎ2
+)2)
+,
+𝑠.𝑡. ∗∈ {𝐼, 𝑇 }, 𝑎 ∈ {1, 2, … , 𝑘},
+(2)
+where 𝝓𝑎(𝐗∗
+𝑖 ) represents the radial distance between the 𝑖th sample and 
+the 𝑎th grid center, while ℎ is a bandwidth parameter that determines 
+the scale of influence for each basis function. The complete feature 
+representation is then formed by concatenating the RBF responses 
+across all grid points: 
+𝝓(𝐗∗
+𝑖 ) = [ 𝝓1(𝐗∗
+𝑖 ), … , 𝝓𝑘(𝐗∗
+𝑖 )] ,
+𝑠.𝑡. ∗∈ {𝐼, 𝑇 }.
+(3)
+To enhance feature expressiveness, we employ a SplineLinear trans-
+formation, a fully connected linear layer designed to adaptively inte-
+grate multiple radial basis functions. Specifically, a learnable weight 
+matrix 𝐖𝑠𝑝𝑙 is introduced to perform a weighted fusion of RBF-
+transformed features, enabling a more precise approximation of the 
+target function. Finally, in an FKAN network with 𝑘 center points, 
+all radial basis functions are aggregated through the SplineLinear 
+transformation to produce the final FKAN output: 
+FKAN (𝐗∗)= 𝐖𝑠𝑝𝑙𝝓(𝐗∗
+𝑖 ),
+𝑠.𝑡. ∗∈ {𝐼, 𝑇 }.
+(4)
+3.2.2. Semantic meta-similarity construction
+We employ the CLIP feature extractor to extract features from mul-
+tiple image-text pairs, denoted as 𝐗𝐼 and 𝐗𝑇 , respectively. We propose 
+a semantic meta-similarity construction model to assess the similarity 
+between different modalities, followed by cross-modal similarity fusion 
+steps. Initially, the cosine self-similarity matrix is computed separately 
+for the image and text features: 
+𝐒∗
+𝑖𝑗 = cos(𝐗∗
+𝑖 , 𝐗∗
+𝑗 ),
+𝑠.𝑡. ∗∈ {𝐼, 𝑇 }.
+(5)
+Then, perform linear fusion to balance the self-similarity matrices 
+of the two modalities: 
+𝐒1 = 𝛼1𝐒𝐼 + (1 − 𝛼1)𝐒𝑇 . (6)
+Based on the intra-modal similarity calculation, we introduce the 
+cross-modal similarity fusion to consider the correlation between mul-
+timodalities further. The cross-modal similarity matrix between image 
+and text modalities is calculated as follows: 
+𝐒2 = 𝛼2
+(𝛼1 cos(𝐒𝐼 , 𝐒𝐼 ) + (1 − 𝛼1) cos(𝐒𝑇 , 𝐒𝑇 ))
++ (1 − 𝛼2) cos(𝐒𝑇 , 𝐒𝐼 ),
+(7)
+where 𝛼1 and 𝛼2 are the parameters used to integrate and adjust the 
+weights, cos(𝐒𝐼 , 𝐒𝐼 ) is the same transform like Eq. (5). A similarity 
+matrix 𝐒, which preserves intra-modal correlations and cross-modal 
+similarity, is obtained by integrating 𝐒1 and 𝐒2: 
+𝐒 = tanh (𝐒1 + exp (𝐒2
+)− 1). (8)
+Although 𝐒 can initially reflect intra-modal correlations and cross-
+modal similarities, the noise handling is not perfect enough, resulting 
+in a similarity matrix 𝐒 that lacks a certain degree of robustness. In 
+particular, the existing similarity matrix 𝐒 constructed by linear fusion 
+cannot effectively distinguish between high and low similarity values. 
+It cannot focus on high-similarity instance pairs (which usually corre-
+spond to pairs of instances with high cross-modal semantic similarity). 
+Over-considering the low similarity values (which generally correspond 
+to semantically irrelevant or noisy instance pairs) introduces unwanted 
+noise and affects the overall performance. To address this problem, we 
+directly set the 𝑡 minimum values in each row of 𝐒, which is designed 
+as follows: 
+𝐒𝑖𝑗 =
+{
+0, 𝑖𝑓 𝐒𝑖𝑗 ∈ 𝑣𝑖(𝑡)
+𝐒𝑖𝑗 , 𝑜𝑡ℎ𝑒𝑟𝑤𝑖𝑠𝑒,
+(9)
+where 𝑣𝑖(𝑡) denotes the collection of the 𝑡 most minor elements in the 
+𝑖th row of 𝐒. After the above simple processing, we obtain a more 
+sparse and slightly less smooth matrix. Next, to further expand the 
+Knowledge-Based Systems 319 (2025) 113522 
+4 
+
+===== PAGE 5 =====
+Y. Chen et al.
+semantic similarity gap between different similar pairs, we introduce 
+the exponential transformation to amplify the difference of high simi-
+larity values, add the unit matrix I to enhance the importance of the 
+instance’s features, and finally obtain a more robust similarity matrix, 
+which improves the ability to express the neighborhood relationship 
+of the accurate data, and the matrix S the following transformation 
+obtains: 
+𝐒 = 2
+1 + exp(𝐒) − 1 + 𝐈. (10)
+3.2.3. Radial adaptive hybrid coding
+FKAN’s exceptional ability to capture local features and reduce 
+computational complexity enhances feature representation capabilities 
+while improving overall efficiency, leading us to propose an innovative 
+FKAN-based encoder. This encoder distinguishes itself from traditional 
+MLP encoders by learning more complex nonlinear relationships. The 
+RBF function calculates the Gaussian radial distances between the 
+input data and these grid points, generating a set of basis function 
+outputs. These basis functions capture the local features of the input 
+data and are dynamically weighted through an adaptive SplineLinear 
+combination, allowing them to adjust automatically for different inputs. 
+This effectively forms a set of variable activation functions, overcoming 
+the limitations of MLPs, which rely on fixed activation functions. 
+Furthermore, the SiLU activation function is introduced to perform 
+a stable and efficient transformation of the original input features. 
+Replacing the traditional fully connected layer encoder with the FKAN-
+based encoder significantly enhances the model’s expressiveness and 
+generalization capabilities, making it more adaptable to complex data 
+distributions. We input the original features 𝐗𝐼 and 𝐗𝑇 ) into FKAN to 
+obtain the output ̄𝐙𝐼 and ̄𝐙𝑇 : 
+̄𝐙∗ = FKAN( 𝐗∗),
+𝑠.𝑡. ∗∈ {𝐼, 𝑇 }.
+(11)
+The RBF transformation effectively extracts deep features from the 
+input data. However, since it primarily relies on local features, it may 
+sometimes fail to capture global information and essential low-order 
+features. To address this issue, we introduce a basis update term. 
+The basic update term comprises a fully connected layer and a SiLU 
+activation function. The fully connected layer first performs linear 
+combinations on the input features, and the subsequent SiLU activa-
+tion function introduces nonlinearity, thus enhancing the integrity of 
+feature representation and improving the model’s nonlinear expressive 
+capability. The introduction of the basis update term is motivated by 
+two main considerations: (1) Identity semantic preservation. The RBF 
+transformation mainly focuses on local features, while the basis update 
+term directly operates on the original features, preserving the identity 
+semantics of image and text modalities. As a result, the feature mapping 
+process retains some global information. (2) Enhancement of non-linear 
+expression. The basis update term applies a transformation with train-
+able parameters, enabling flexible adjustments in feature mapping and 
+improving the model’s ability to fit complex data relationships, en-
+hancing its nonlinear expressiveness. The core idea of the basis update 
+term is to introduce a supplementary linear transformation followed 
+by a nonlinear activation on top of the RBF transformation. This 
+design ensures that the final feature representation retains the high-
+order features extracted by the RBF transformation and strengthens the 
+modeling of low-order information. The final output of the features 𝐙𝐼
+and 𝐙𝑇 is formulated as follows: 
+𝐙∗ = ̄𝐙∗ + 𝜎(𝐗∗𝐖𝑏𝑎𝑠𝑒 + 𝐛𝑏𝑎𝑠𝑒),
+𝑠.𝑡. ∗∈ {𝐼, 𝑇 },
+(12)
+where 𝐖𝑏𝑎𝑠𝑒 and 𝐛𝑏𝑎𝑠𝑒 are the weight and bias terms of the basis update 
+term, respectively.
+3.2.4. Broadcasting node embedding
+Learning hash codes involves assembling a radial adaptive hybrid 
+encoding method to extract the latent semantic features of both text and 
+image. In the hash code generation phase, we integrate GCN and FKAN 
+to develop a novel module, the Similarity-Aware FKAN (SAFKAN). This 
+module captures higher-order graph structure relationships and cross-
+modal joint semantic features. SAFKAN processes the extracted joint 
+semantics to enhance feature interactivity and ultimately generates a 
+unified hash code that preserves identity semantics while incorporating 
+joint semantics. We construct graph structures for image, text, and 
+concatenated features to extract richer, higher-order graph structure 
+information.
+A comprehensive description of the SAFKAN process follows. Firstly, 
+FKAN processes the input features 𝐙𝐼 and 𝐙𝑇 , producing the following 
+output: 
+𝐙∗(𝑙) = FKAN( 𝐙∗(𝑙−1)),
+𝑠.𝑡. ∗∈ {𝐼, 𝑇 }, 𝑎𝑛𝑑 𝐙∗(0) = 𝐙∗.
+(13)
+To further refine the node feature transformation, we apply the 
+SiLU activation function to the initial node features 𝐙(𝑙−1). Then, the 
+base update term adjusts the features with the weight function 𝐖(𝑙)
+𝑏𝑎𝑠𝑒, 
+producing the output node features 𝐙(𝑙): 
+𝐙∗(𝑙) = 𝐙∗(𝑙) + 𝐖(𝑙)
+𝑏𝑎𝑠𝑒 ⋅ 𝜎(𝐙∗(𝑙−1))
+= 𝐙∗(𝑙) + 𝐖(𝑙)
+𝑏𝑎𝑠𝑒 ⋅ 𝐙∗(𝑙−1)
+1 + 𝑒−𝐙∗(𝑙−1) ,
+𝑠.𝑡. ∗∈ {𝐼, 𝑇 }.
+(14)
+Next, the update facilitates the aggregation and refinement of neigh-
+borhood information through the similarity matrix, which encodes 
+higher-order graph structural relationships and strengthens the global 
+feature representation. Specifically, the use of the similarity matrix 
+serves two primary purposes: (1) it preserves the direct contribution of 
+the original features, mitigating potential information loss caused by 
+complex transformations, and (2) it enhances network robustness and 
+accelerates convergence: 
+𝐙∗(𝑙) =
+(
+FKAN(𝐙∗(𝑙−1)) + 𝐖(𝑙)
+𝑏𝑎𝑠𝑒 ⋅ 𝜎(𝐙∗(𝑙−1))
+)
+⋅ 𝐒,
+𝑠.𝑡. ∗∈ {𝐼, 𝑇 },
+(15)
+where 𝐒 represents the similarity matrix obtained from Eq. (10). As a 
+result, the output of SAFKAN is as follows: 
+𝐙𝐹 𝐾∗ = SAFKAN(𝐙∗),
+𝑠.𝑡. ∗∈ {𝐼, 𝑇 },
+(16)
+where 𝐙𝐹 𝐾∗ represent 𝐙𝐹 𝐾𝐼 and 𝐙𝐹 𝐾𝑇 . The concatenated semantic 
+representation 𝐙𝐽 , derived from 𝐙𝐼 and 𝐙𝑇 , is input to the SAFKAN, 
+resulting in the deep semantic representation 𝐙𝐹 𝐾𝐽 . During the hash 
+code generation stage, 𝐙𝐹 𝐾𝐽 is aggregated into 𝐙𝐹 𝐾𝐼 and 𝐙𝐹 𝐾𝑇 , which 
+are then passed through a linear layer. After applying batch normaliza-
+tion, the final hash codes 𝐇𝐼 and 𝐇𝑇 are generated. The hash codes 
+𝐇𝐼 and 𝐇𝑇 serve as inputs to the image decoder and text decoder, 
+which are also implemented using FastKAN. The decoder produce 
+the reconstructed identity semantic features ̄𝐗𝐼 and ̄𝐗𝑇 . The 𝐙𝐹 𝐾𝐽 is 
+concatenated with 𝐇𝐼 and 𝐇𝑇 to form 𝐇𝑅. This resulting 𝐇𝑅 is then 
+passed through a fully connected layer for aggregation, followed by the 
+Tanh activation function, producing the joint modal semantic features 
+𝐇. These features encapsulate rich multimodal semantic information 
+while preserving the identity semantics. Finally, the binarized hash 
+code 𝐁 is obtained by applying the sign function to 𝐇: 
+𝐁 = sign(𝐇), (17)
+where sign(⋅) represents the activation function.
+Knowledge-Based Systems 319 (2025) 113522 
+5 
+
+===== PAGE 6 =====
+Y. Chen et al.
+3.2.5. Hash code learning
+In this subsection, we construct a set of loss functions by combining 
+all the features obtained from the previous neural network processing. 
+A multi-layer network has processed these features and contains rich 
+information about the input data. We will use these features to optimize 
+the learning process of hash codes and hash functions, thus improving 
+the accuracy and generalization of the model. This approach will enable 
+the model to learn efficiently and generate more meaningful binary 
+hash codes. Firstly, we focus on the reconstructed text and image 
+features 𝐗𝐼 and 𝐗𝑇 decoded earlier. We use the reconstructed features 
+of these two modalities to design an identity semantic preservation loss, 
+which enables further preservation of the identity semantic features 
+in the text and image modalities by aligning the original features 𝐗𝐼
+and 𝐗𝑇 with the reconstructed features ̄𝐗𝐼 and ̄𝐗𝑇 and constrains the 
+learning of the hash code in the following way: 
+𝑖𝑠𝑝 = ‖ ̄𝐗𝑇 − 𝐗𝑇 ‖2
+𝐹 + ‖ ̄𝐗𝐼 − 𝐗𝐼 ‖2
+𝐹 . (18)
+To preserve information consistency between the original instances 
+𝐗𝐼 , 𝐗𝑇 , and the hash codes 𝐁, we introduce the Information Con-
+sistency Loss (ICL). The ICL ensures that the relationships between 
+neighboring features are maintained, both within the modality and 
+across modalities: 
+𝑖𝑐𝑙𝑠𝑟 = ‖𝐒 − cos(𝐇, 𝐇)‖2
+𝐹 + ‖𝐒 − cos(𝐇𝑇 , 𝐇𝑇 )‖2
+𝐹
++ ‖𝐒 − cos(𝐇𝐼 , 𝐇𝐼 )‖2
+𝐹 ,
+(19)
+where ‖𝐒 − cos( 𝐇𝑇 , 𝐇𝑇 )‖2
+𝐹 and ‖𝐒 − cos( 𝐇𝐼 , 𝐇𝐼 )‖2
+𝐹 ensure that the 
+neighboring relationships within the potential features 𝐇𝑇 and 𝐇𝐼 are 
+preserved. Meanwhile, ‖𝐒−cos(𝐇, 𝐇)‖2
+𝐹 integrates cross-modal semantic 
+features into 𝐇. Additionally, we design 𝑖𝑐𝑙𝑞 to minimize the informa-
+tion loss during the binarization process from the joint modal semantic 
+features 𝐇 to the hash codes 𝐁: 
+𝑖𝑐𝑙𝑞 = ‖𝐁 − 𝐇‖2
+𝐹 . (20)
+3.2.6. Hash function learning
+The loss function was previously designed to enable the model to 
+efficiently learn hash code with good representational capabilities 𝐁. 
+We introduce quantified and reconstructed losses to optimize the hash 
+function’s learning process. These losses are intended to ensure that 
+the hash code generated by the hash function efficiently represents 
+the input data while minimizing the loss of information during the 
+binarisation process: 
+𝑞𝑚𝑑 = ‖𝐁 − 𝑓𝑇 (𝐗𝑇 ; 𝜃𝑇 )‖2
+𝐹 + ‖𝐁 − 𝑓𝐼 (𝐗𝐼 ; 𝜃𝐼 )‖2
+𝐹
++ ‖𝑓𝑇 (𝐗𝑇 ; 𝜃𝑇 ) − 𝑓𝐼 (𝐗𝐼 ; 𝜃𝐼 )‖2
+𝐹 ,
+(21)
+where 𝐁 is the original binary hash code, sign (𝑓𝐼 (𝐗𝐼 ; 𝜃𝐼 )) and
+sign (𝑓𝑇 (𝐗𝑇 ; 𝜃𝑇 )) are the hash code representations of image feature 
+𝐗𝐼 and text feature 𝐗𝑇 , respectively. Following the example of hash 
+code learning, it is easy to see that only considering quantization and 
+reconstruction losses in the hash function learning phase is insuffi-
+cient. Therefore, we design loss functions that include information 
+consistency losses during hash function learning to ensure structural 
+consistency across modalities: 
+𝑖𝑐𝑙𝑠𝑖𝑚 = ‖𝐒 − cos(𝑓𝐼 (𝐗𝐼 ; 𝜃𝐼 ), 𝑓𝐼 (𝐗𝐼 ; 𝜃𝐼 ))‖2
+𝐹
++ ‖𝐒 − cos(𝑓𝑇 (𝐗𝑇 ; 𝜃𝑇 ), 𝑓𝑇 (𝐗𝑇 ; 𝜃𝑇 ))‖2
+𝐹
++ ‖𝐒 − cos(𝑓𝐼 (𝐗𝐼 ; 𝜃𝐼 ), 𝑓𝑇 (𝐗𝑇 ; 𝜃𝑇 ))‖2
+𝐹 .
+(22)
+3.3. Overall objective
+By integration of Eq. (18), Eq. (19), and Eq. (20), we obtain the 
+overall objective function for the learning phase of the hash code: 
+min
+𝜃𝐶
+𝑐𝑜𝑑𝑒𝑠 = 𝜆1𝑖𝑠𝑝 + 𝜆2𝑖𝑐𝑙𝑠𝑟 + 𝑖𝑐𝑙𝑞 , (23)
+Algorithm 1 Radial Adaptive Node Embedding Hashing
+1: Input: 𝑛 image-text pairs from dataset; batch size 𝑏; hash code 
+length 𝑟; the learning rates for hash codes and hash functions are 
+𝑙𝑟𝑐 and 𝑙𝑟𝑓 , respectively; number of epochs 𝐸; hyperparameters: 𝛼1, 
+𝛼2, 𝜆1, 𝜆2, and 𝜆3. 
+2: Output: 𝜃𝐼 and 𝜃𝑇 .
+3: Initialize model parameters 𝜃𝐼 , 𝜃𝑇 , and 𝜃𝐶 ; 
+4: Extract feature matrices 𝐗I and 𝐗T and construct the similarity 
+matrix 𝐒; 
+5: repeat 
+6: Build Fast Kolmogorov–Arnold Network 𝐙FKI, 𝐙FKT, 𝐙FKJ, and 
+capture higher-order features at Eq. (15);
+7: Obtain hash codes 𝐇𝐼 , 𝐇𝑇 , and 𝐇;
+8: Compute the loss using Eq. (23) ;
+9: until convergent;
+10: Generate hash codes for training samples; 
+11: repeat 
+12: Compute 𝑓𝐼 (𝐗𝐼 ; 𝜃𝐼 ) and 𝑓𝑇 (𝐗𝑇 ; 𝜃𝑇 ) through forward propagation; 
+13: Compute the loss using Eq. (24) ; 
+14: Update parameters 𝜃𝐼 and 𝜃𝑇 through backpropagation;
+15: until convergent;
+where 𝜆1 and 𝜆2 represent the weight control parameters. Furthermore, 
+by combining Eqs.  (21) and (22), we get the overall objective function 
+for the learning phase of the hash function: 
+min
+𝜃𝐼 ,𝜃𝑇
+𝑓 𝑢𝑛𝑐𝑡𝑖𝑜𝑛𝑠 = 𝑞𝑚𝑑 + 𝜆3𝑖𝑐𝑙𝑠𝑖𝑚 , (24)
+where 𝜆3 represents the weight control parameter.
+4. Experiment
+4.1. Datasets
+To evaluate the performance of the proposed RANEH method in I2T 
+(Image-to-Text) and T2I (Text-to-Image) cross-modal retrieval tasks, 
+we utilize three widely adopted datasets: MIRFlickr-25K, NUS-WIDE, 
+and MSCOCO. These datasets are selected because of their diversity 
+in dataset size, label types, semantic richness, and cross-modal in-
+formation, which comprehensively evaluate the model’s effectiveness 
+in various real-world scenarios. Their large scale and semantic diver-
+sity make them ideal for testing the scalability and robustness of the 
+proposed model. Furthermore, these three datasets are the primary 
+benchmarks used by most state-of-the-art unsupervised cross-modal 
+hashing methods, ensuring the fairness and validity of experimen-
+tal comparisons. Comparisons are conducted against several baseline 
+methods, and a series of extended experiments are designed to further 
+verify the superiority of the RANEH method.
+∙ MIRFlickr-25K [43] contains 25,000 image-text pairs and 24 
+annotated labels. We eliminated the pairs with less than 20 
+labels, leaving 20,015 pairs. Based on the remaining image-text 
+pairs after the initial filtering, we randomly select 2,000 pairs 
+as the query set, the remaining 18,015 pairs as the retrieval set, 
+and 5,000 pairs from the training set are included in the retrieval 
+set.
+∙ NUS-WIDE [44] consisted of 269,648 image-text pairs in 81 cat-
+egories. We filtered the top 10 categories and retained 186,577 
+image-text pairs. We randomly sample 2000 pairs of image texts 
+for query and the remaining 184577 pairs for retrieval, and 5000 
+pairs in the retrieval set are selected for training.
+∙ MSCOCO [45] consists of 123,287 image-text pairs in 80 sepa-
+rate concepts. 2,000 pairs of selected samples form the query set 
+randomly, 5,000 pairs are selected to form the training set, and 
+the remaining 121,287 pairs form the retrieval set.
+Knowledge-Based Systems 319 (2025) 113522 
+6 
+
+===== PAGE 7 =====
+Y. Chen et al.
+Table 1
+The mAP scores for all methods on three datasets. Red , blue  and green  denote the best, the second, and the third results, respectively.
+Task Method MIRFlickr-25K NUS-WIDE MS COCO
+16 bits 32 bits 64 bits 128 bits 16 bits 32 bits 64 bits 128 bits 16 bits 32 bits 64 bits 128 bits
+I → T
+DBRC [46] 0.617 0.619 0.620 0.621 0.424 0.459 0.447 0.447 0.567 0.591 0.617 0.627
+UDCMH [47] 0.689 0.698 0.714 0.717 0.511 0.519 0.524 0.558 – – – –
+JDSH [48] 0.832 0.853 0.882 0.892 0.736 0.793 0.832 0.835 0.694 0.738 0.769 0.788
+DJSRH [49] 0.810 0.843 0.862 0.876 0.724 0.773 0.798 0.817 0.678 0.724 0.743 0.768
+AGCH [50] 0.865 0.887 0.892 0.912 0.809 0.830 0.831 0.852 0.741 0.772 0.789 0.806
+SACH [51] 0.875 0.892 0.916 0.924 0.769 0.808 0.839 0.843 0.778 0.806 0.812 0.824
+SCCGDH [52] 0.882 0.892 0.893 0.911 0.812 0.837 0.840 0.871 0.732 0.777 0.808 0.822
+CIRH [26] 0.901 0.913 0.929 0.937 0.815 0.836 0.854 0.862 0.797 0.819 0.830 0.849
+RICH [53] 0.869 0.875 0.908 0.925 0.790 0.806 0.842 0.852 – – – –
+CFRH [54] 0.902 0.914 0.936 0.945 0.807 0.824 0.854 0.859 0.870 0.915 0.929 0.943
+UMSP [55] 0.901 0.905 0.929 0.942 0.814 0.831 0.847 0.858 – – – –
+UDDH [37] – 0.844 0.899 0.912 – 0.791 0.801 0.822 – – – –
+RANEH 0.915 0.937 0.950 0.961 0.828 0.852 0.867 0.876 0.905 0.939 0.952 0.958
+T → I
+DBRC [46] 0.618 0.626 0.626 0.628 0.455 0.459 0.468 0.473 0.635 0.671 0.697 0.735
+UDCMH [47] 0.692 0.704 0.718 0.733 0.637 0.653 0.695 0.716 – – – –
+JDSH [48] 0.825 0.864 0.878 0.880 0.721 0.785 0.794 0.804 0.703 0.759 0.793 0.825
+DJSRH [49] 0.786 0.822 0.835 0.847 0.712 0.744 0.771 0.789 0.650 0.753 0.805 0.823
+AGCH [50] 0.829 0.849 0.852 0.880 0.769 0.780 0.798 0.802 0.746 0.774 0.797 0.817
+SACH [51] 0.842 0.878 0.896 0.896 0.739 0.801 0.808 0.814 0.798 0.832 0.861 0.890
+SCCGDH [52] 0.820 0.856 0.872 0.880 0.767 0.773 0.772 0.801 0.774 0.781 0.832 0.878
+CIRH [26] 0.867 0.885 0.900 0.901 0.774 0.803 0.810 0.817 0.811 0.847 0.872 0.895
+RICH [53] 0.830 0.843 0.885 0.902 0.771 0.777 0.802 0.822 – – – –
+CFRH [54] 0.874 0.885 0.896 0.910 0.780 0.791 0.798 0.817 0.871 0.913 0.924 0.933
+UMSP [55] 0.862 0.866 0.879 0.886 0.772 0.783 0.794 0.805 – – – –
+UDDH [37] – 0.835 0.858 0.869 – 0.771 0.785 0.802 – – – –
+RANEH 0.897 0.906 0.915 0.926 0.804 0.823 0.832 0.837 0.913 0.951 0.964 0.969
+4.2. Baseline methods and evaluation criteria
+In this experiment, diverse state-of-the-art unsupervised cross-modal 
+retrieval hashing methods are used to compare with the proposed 
+method RANEH, including Deep Binary Reconstruction for Cross-Modal 
+Hashing (DBRC) [46], Unsupervised Deep Cross-Modal Hashing (UD-
+CMH) [47], Joint-modal Distribution-based Similarity Hashing (JDSH)
+[48], Deep Joint-Semantics Reconstructing Hashing (DJSRH) [49], 
+Aggregation-based graph convolution Hashing (AGCH) [50], Self-
+Attentive CLIP Hashing (SACH) [51], Specific class center guided 
+deep hashing for cross-modal retrieval (SCCGDH) [52], Correlation 
+Identity Representation Hashing (CIRH) [26], Rapid Image-text Cross-
+modal Hashing (RICH) [53], CLIP-based Fusion-modal Reconstruct-
+ing Hashing (CFRH) [54], Unsupervised deep hashing with multiple 
+similarity preservation (UMSP)  [55] and Unsupervised Dual Deep 
+Hashing (UDDH) [37]. The assessment uses various indicators to ensure 
+the comparisons are reliable. The main assessment metrics include 
+the mean accuracy of the top 50 (mAP@50), Top-R, and parameter 
+sensitivity analysis.
+4.3. Implementation details
+The experiments were conducted on systems equipped with 13th-
+generation Intel(R) Core(TM) i5-13500H CPUs and NVIDIA GeForce 
+RTX 3050 6 GB GPUs; training and testing were performed on the 
+Pytorch2.5.1 framework. During the experiments, we set several rough 
+hyperparameter values for three datasets: for MIRFlickr-25k, 𝛼1 =
+0.4, 𝛼2 = 0 .7, 𝜆1 = 100 , 𝜆2 = 1 , 𝜆3 = 1 ; for NUS-WIDE, 𝛼1 = 0 .6, 𝛼2 =
+0.5, 𝜆 1 = 100 , 𝜆 2 = 10 , 𝜆 3 = 1 ; and for MS COCO, 𝛼1 = 0 .3, 𝛼2 =
+0.6, 𝜆 1 = 100, 𝜆 2 = 10, 𝜆 3 = 10.
+4.4. Retrieval accuracy comparison
+mAP Analysis: As seen from the mAP@50 results in Table  1, 
+we compare the scores with those of other state-of-the-art methods 
+under different hash code lengths. In I → T retrieval tasks, our 
+RANEH method improved by 1.5% ∼ 2.5%, 0.6% ∼ 1.9%, and 1.6% 
+∼ 4.0% on the MIRFlickr-25K, NUS-WIDE, and MSCOCO datasets, 
+respectively, compared to the optimal baseline approaches. In T →
+I retrieval tasks, RANEH method gets an improvement of 1.7% ∼
+2.6%, 1.8% ∼ 3.0%, and 3.9% ∼ 4.8% on the MIRFlickr-25K, NUS-
+WIDE, and MSCOCO datasets, respectively, compared to the optimal 
+baseline methods. To further validate the performance of the RANEH 
+method, we also include the supervised method Specific Class Center 
+Guided Deep Hashing (SCCGDH) [52] for comparison. This method 
+leverages label information to guide hash code learning and performs 
+well in supervised settings. The experimental results show that, despite 
+not relying on labeled data, the RANEH method achieves competitive 
+performance compared to SCCGDH.
+The performance improvement of the RANEH method can be at-
+tributed to the following factors: (1) Radial Adaptive Hybrid Encoder 
+Design: Incorporating FastKAN as an adaptive encoder enables dy-
+namic feature mapping adjustments based on data distribution, effec-
+tively extracting high-dimensional semantic features and enhancing the 
+nonlinear expressiveness of cross-modal retrieval. (2) Broadcast Node 
+Embedding Mechanism: Utilizing FastKAN for information broadcasting 
+strengthens deep semantic associations between modalities, enhances 
+feature interactions in high-dimensional spaces, and ensures model sta-
+bility and superior performance under complex data distributions. The 
+experimental results show that the RANEH method performs well in 
+both I2T and T2I cross-modal retrieval tasks. It shows more stable and 
+excellent retrieval accuracy and precision performance, outperforming 
+the best existing methods in all three datasets.
+Top-R Precision: As shown in Fig.  3, we examined the performance 
+under different Top-R values on three datasets, MIRFlickr-25K, NUS-
+WIDE, and MSCOCO with 128-bit hash code. In the experimental 
+results on all datasets, the RANEH method shows excellent stability 
+despite the gradual decrease in retrieval performance with increasing 
+Top-R value. In particular, its performance fluctuation is significantly 
+smaller than other methods at larger R-values, indicating that the 
+RANEH method has strong adaptability under large-scale data and 
+high-dimensional features and can maintain consistent performance on 
+different datasets. This advantage is primarily attributed to constructing 
+the semantic meta-similarity matrix, which reconstructs identity se-
+mantics through similarity matrices, ensuring that hash codes precisely 
+capture modality-specific features while effectively reducing semantic 
+noise. As a result, the robustness and accuracy of cross-modal match-
+ing are significantly enhanced. Compared with other methods, our 
+Knowledge-Based Systems 319 (2025) 113522 
+7 
+
+===== PAGE 8 =====
+Y. Chen et al.
+Fig. 3. The top-R precision curves of the RANEH method with the 128-bits hash code on three datasets.
+method’s stability and global correlation modeling ability are con-
+siderably better than baseline methods, showing strong robustness, 
+especially in complex and variable retrieval tasks, with tremendous 
+potential and advantages.
+4.5. Parameter sensitivity analysis
+We designed hyperparameter sensitivity analysis experiments to 
+assess the impact of the hyperparameter used in the experiments on the 
+model performance. Specifically, we focused on five hyperparameters: 
+𝛼1, 𝛼2, 𝜆1, 𝜆2, and 𝜆3, where 𝛼1 and 𝛼2 take values from 0.1 to 0.9 in 0.1 
+increments, and 𝜆1, 𝜆2, and 𝜆3 take values in the range{1𝑒−5, … , 1𝑒+4}. 
+On the MIRFlickr-25K dataset, we set up a 128-bit hash code to 
+evaluate the effect of different hyperparameter settings on the model 
+performance. As shown in Fig.  4, we find that 𝛼1 and 𝛼2 have little 
+effect on the final performance of the model. The retrieval performance 
+of the model is consistently high and varies little for different values. 
+For 𝜆1 and 𝜆2, although at higher values (e.g., 1𝑒−1 and 1𝑒+1), small 
+fluctuations occur, but overall, the model performance remains highly 
+stable. As for 𝜆3, the model can maintain smooth and highly accurate 
+performance until its value exceeds 1. From the results of the above 
+analyses, we can conclude that the RANEH method for 𝛼1, 𝛼2, 𝜆1, and 
+𝜆2 exhibits a low sensitivity to 𝜆3 within a smaller range of values. The 
+sensitivity of the model to it remains low. The RANEH method shows 
+small performance fluctuations and robustness in actual retrieval tasks.
+4.6. Ablation experiments
+We conducted comprehensive experiments on the MIRFLICKR
+dataset, utilizing various hash code lengths to evaluate the three 
+ablation variants of the proposed RANEH method. The details of each 
+variant are as follows:
+• RANEH-SMSC: To demonstrate the superiority of the cross-modal 
+fusion similarity matrix 𝐒2, we replace Eq. (7) with
+𝐒2 = 𝛼1 cos(𝐒𝐼 , 𝐒𝐼 ) + (1 − 𝛼1) cos (𝐒𝑇 , 𝐒𝑇 ) to perform ablation 
+experiments.
+• RANEH-RAHC: To assess the contribution of the radial adaptive 
+hybrid coding module to the overall framework, we substituted 
+the encoder constructed using the FastKAN with an alternative 
+encoder module composed of a linear layer, a batch normaliza-
+tion layer and a ReLU activation function to conduct ablation 
+experiments.
+• RANEH-BNE: To further verify the outstanding effect of FKAN in 
+capturing the deep relationships between modalities and reducing 
+the semantic gap between different modalities. We remove the 
+FKAN component from SAFKAN and replace Eq. (15) with: 𝐙(𝑙) =
+𝐖(𝑙)
+𝑏𝑎𝑠𝑒 ⋅ 𝜎(𝐙(𝑙−1)) ⋅ 𝐒 to perform ablation experiments.
+The experimental results in Table  2 demonstrate that each compo-
+nent of the proposed method RANEH plays a key role in significantly 
+improving cross-modal retrieval performance. Specifically, the con-
+tributions of cross-modal semantic similarity construction, the radial 
+adaptive hybrid coding module, and the FKAN module are thoroughly 
+validated through the experiments. When the hash code length is set to 
+16, 32, 64, and 128 bits, the RANEH method consistently outperforms 
+its ablation variants on the MIRFlickr-25K, NUS-WIDE, and MSCOCO 
+datasets, achieving superior retrieval results across all configurations. 
+These findings strongly affirm the exceptional performance of the 
+RANEH method across different datasets and task scenarios. Further-
+more, they highlight the critical value of its modular design in effec-
+tively capturing multimodal data correlations and improving retrieval 
+accuracy, providing a robust and adaptable solution for addressing 
+complex cross-modal retrieval tasks.
+Knowledge-Based Systems 319 (2025) 113522 
+8 
+
+===== PAGE 9 =====
+Y. Chen et al.
+Fig. 4. The impact of parameters with a 128-bit code length on MIRFlickr-25K. Each subfigure illustrates the effects of different parameters on I2T and T2I performance.
+Table 2
+The mAP results of the ablation study on the three datasets. Red  denotes the best results.
+Task Method MIRFlickr-25K NUS-WIDE MS COCO
+16 bits 32 bits 64 bits 128 bits 16 bits 32 bits 64 bits 128 bits 16 bits 32 bits 64 bits 128 bits
+I → T
+RANEH-SMSC 0.906 0.923 0.933 0.941 0.806 0.827 0.845 0.852 0.888 0.927 0.947 0.953
+RANEH-RAHC 0.899 0.916 0.933 0.940 0.810 0.829 0.842 0.854 0.880 0.931 0.945 0.952
+RANEH-BNE 0.906 0.927 0.934 0.945 0.800 0.825 0.840 0.850 0.899 0.934 0.948 0.953
+RANEH 0.915 0.937 0.950 0.961 0.828 0.852 0.867 0.876 0.905 0.939 0.952 0.958
+T → I
+RANEH-SSE 0.878 0.893 0.901 0.908 0.790 0.812 0.821 0.824 0.898 0.942 0.956 0.959
+RANEH-RAHC 0.879 0.892 0.899 0.910 0.792 0.813 0.818 0.825 0.896 0.938 0.955 0.961
+RANEH-BNE 0.886 0.895 0.902 0.910 0.780 0.809 0.821 0.822 0.904 0.940 0.959 0.962
+RANEH 0.897 0.906 0.915 0.926 0.804 0.823 0.832 0.837 0.913 0.951 0.964 0.969
+4.7. Convergence analysis
+In this section, we perform convergence analysis experiments on 
+three datasets, MIRFlickr, NUS-WIDE, and MSCOCO, using 128-bit 
+hash codes. The experimental results are shown in Fig.  5. On the 
+MIRFlickr dataset, the model achieves stable convergence after 120 
+cycles, and the loss value shows a smooth decreasing trend; on the NUS-
+WIDE dataset, the model achieves convergence after 70 training cycles 
+and shows a faster performance improvement; and on the MSCOCO 
+dataset, the model achieves convergence in 50 cycles. As training 
+iterations increase, the model’s performance gradually stabilizes across 
+all datasets. Compared to existing methods, the RANEH method ex-
+hibits significantly faster convergence on the MSCOCO dataset than 
+UCCH [6]. The RANEH method achieves stable convergence within 50 
+epochs, whereas UCCH requires approximately 80 epochs to converge. 
+This indicates that the RANEH method can optimize model parameters 
+more efficiently and reach convergence in fewer training iterations. 
+Furthermore, compared to RSRH [22], our method exhibits a smoother 
+convergence process, with the loss value decreasing more stably during 
+training, thereby avoiding drastic fluctuations. This indicates that the 
+RANEH method possesses greater robustness and stability in the op-
+timization process. These results fully validate the effectiveness of the 
+RANEH method in cross-modal retrieval tasks, as it not only accelerates 
+model convergence but also enhances the stability of retrieval per-
+formance, providing strong support for efficient cross-modal hashing 
+learning.
+4.8. Computational cost analysis
+We compared our method against several state-of-the-art baseline 
+methods, including DJSRH [49], AGCH [50], CIRH [26], and CA-
+GAN [56]. The experiments were conducted with a hash code length 
+set to 128 bits across three widely used datasets: MIRFlickr-25K, NUS-
+WIDE, and MSCOCO. To ensure a fair comparison, we uniformly set the 
+training iteration count to 50, and the retrieval set comprised the entire 
+dataset. As shown in Table  3, the proposed RANEH method significantly 
+Knowledge-Based Systems 319 (2025) 113522 
+9 
+
+===== PAGE 10 =====
+Y. Chen et al.
+Fig. 5. Convergence analysis of the RANEH method with 128-bit hash codes on three datasets.
+Table 3
+The time cost (seconds) of the RANEH method and various baseline methods with 128 bits on the 
+MIRFlickr-25K, NUS-WIDE, and MSCOCO datasets. The best-performing results are highlighted in Red .
+Method Training time (s) Query time (s)
+MIRFlickr-25K NUS-WIDE MSCOCO MIRFlickr-25K NUS-WIDE MSCOCO
+DJSRH [49] 743.68 783.42 935.41 12.67 91.34 85.64
+AGCH [50] 826.32 865.92 958.96 25.36 152.98 108.65
+CIRH [26] 309.86 304.43 377.33 11.35 93.74 72.12
+CAGAN [56] 817.74 861.13 947.37 20.15 112.84 94.3
+RANEH 102.43 180.32 143.95 10.36 89.54 69.11
+Fig. 6. t-SNE visualization of the hash codes for image and text modalities on the 
+MSCOCO dataset. The code lengths are 16, 32, 64, and 128 bits, respectively.
+reduced training time during the training phase compared to the base-
+line methods. This reduction in training time can be attributed to the 
+efficient design of the radial adaptive hybrid coding module, which 
+leverages the FastKAN to dynamically adjust feature mappings based 
+on data distribution, thereby minimizing redundant computations. In 
+the retrieval phase, the time consumption of the RANEH method was 
+comparable to the baseline methods, demonstrating its ability to main-
+tain competitive query performance while achieving faster training 
+speeds. The superior computational efficiency of the RANEH method 
+is further highlighted by its ability to sustain high retrieval accuracy 
+while significantly reducing training time. This efficiency is crucial for 
+real-world applications, where processing large volumes of multimedia 
+data requires speed and accuracy. The results demonstrate that the 
+proposed RANEH method not only outperforms existing methods in 
+retrieval accuracy but also offers a more scalable and computationally 
+efficient solution for cross-modal retrieval tasks.
+4.9. t-SNE visualization
+In this section, to intuitively demonstrate the performance of our 
+proposed RANEH method in cross-modal hash retrieval tasks, we em-
+ploy t-SNE [57] to visualize the discrete hash codes generated by the 
+trained text and image hash networks on the MSCOCO dataset. Fig.  6 
+illustrates the distribution of hash codes at different hash code lengths 
+(16 bits, 32 bits, 64 bits, and 128 bits), where image hash codes and 
+text hash codes are marked in red and blue, respectively.
+The visualization results show that the clustering effect becomes 
+more compact as the hash code length increases. When using 16-
+bit hash codes, the hash representations of images and texts exhibit 
+significant distribution overlap, and the boundaries between different 
+categories remain relatively vague. However, when the hash code 
+length increases to 64 bits or more, samples of the same category 
+become more tightly clustered in the hash space. In contrast, the 
+distinction between different categories becomes clearer. This trend 
+indicates that more extended hash codes provide greater representa-
+tional capacity, allowing the model to capture cross-modal semantic 
+information accurately. This improvement can be attributed to two rea-
+sons: (1) Increased information capacity. Longer hash codes can encode 
+more feature information, enabling similar samples to be mapped to 
+closer regions in the hash space, thereby improving clustering perfor-
+mance. (2) Enhanced discriminability. When hash codes are short, the 
+hash representations of different categories are more likely to collide, 
+and samples from different categories may be mapped to the same 
+hash value. In contrast, longer hash codes offer stronger discrimina-
+tive power, ensuring better separation between different categories. 
+In summary, experimental results demonstrate that appropriately in-
+creasing the hash code length can effectively improve the performance 
+of cross-modal hash retrieval. However, balancing storage costs and 
+computational efficiency is crucial when selecting the optimal hash 
+code length. Nevertheless, merely increasing the hash code length does 
+not fully address the challenge of modality discrepancy in cross-modal 
+retrieval. The key lies in effectively aligning feature representations 
+across different modalities in the hash space.
+Knowledge-Based Systems 319 (2025) 113522 
+10 
+
+===== PAGE 11 =====
+Y. Chen et al.
+Fig. 7. Demonstration of text-to-image retrieval on the MIRflickr dataset using 128-bit hash code length. Results framed in red indicate incorrect matches, while those framed in 
+green indicate correct matches. I → T denotes Image-to-Text retrieval, and T → I denotes Text-to-Image retrieval.
+4.10. Case study
+In this section, we evaluate the performance of the RANEH method 
+in cross-modal retrieval tasks on the MIRflickr dataset using 128-bit 
+hash codes. As shown in Fig.  7. We focus on analyzing the top 10 
+retrieval results for Text-to-Image (T → I) and Image-to-Text (I → T) 
+queries. Correctly retrieved samples are highlighted with bold green 
+borders, while retrieval errors or mismatched samples are marked with 
+bold red borders. In the T → I task, retrieval errors predominantly arise 
+due to significant differences in color or shape, leading to retrieved im-
+ages that deviate from the expected results. A detailed analysis suggests 
+that such errors stem from feature discrepancies between visual and 
+textual modalities, which can substantially impact retrieval accuracy. 
+In the I → T retrieval task, errors are mainly caused by semantic 
+ambiguity. Some retrieved texts contain relevant keywords but lack 
+accurate context, leading to mismatches. This highlights the ongo-
+ing challenge of bridging the semantic gap in cross-modal retrieval. 
+Nevertheless, the RANEH method demonstrates strong robustness and 
+generalization across different retrieval tasks, significantly improving 
+retrieval accuracy in both T → I and I → T tasks. However, variations 
+in color and shape, semantic ambiguity, dataset noise, and limitations 
+in feature space construction may still affect retrieval performance.
+To further improve retrieval performance, future research can ex-
+plore the following directions: (1) Optimizing cross-modal mapping 
+through more advanced network architectures to reduce modality gaps. 
+(2) Applying data augmentation techniques to mitigate the effects of 
+uneven data distribution and improve model generalization. By ad-
+dressing these challenges, the RANEH method can be further refined 
+to achieve higher robustness and accuracy, making it more effective 
+for real-world cross-modal retrieval applications.
+5. Conclusion
+This paper proposes a novel Radial Adaptive Node Embedding 
+Hashing (RANEH) method to address the challenge of maintaining se-
+mantic consistency across modalities while capturing modality-specific 
+features effectively. RANEH introduces three core innovations: Se-
+mantic meta-similarity construction module, which ensures accurate 
+semantic alignment by reconstructing identity semantics. Radial adap-
+tive hybrid coding method that leverages FastKAN for efficient feature 
+mapping into a shared hash space, preserving semantic consistency 
+across modalities. Broadcasting node embedding unit that enhances 
+feature representation by embedding cross-modal node relationships. 
+These innovations significantly improve semantic alignment, maintain 
+identity consistency, and enhance the efficiency and accuracy of hash 
+learning. Extensive experiments demonstrate RANEH’s superior perfor-
+mance in generating precise and effective hash codes for cross-modal 
+retrieval tasks, highlighting its robustness and effectiveness in real-
+world retrieval scenarios. By effectively bridging the semantic gap 
+between modalities, the RANEH method offers promising applications 
+in content-based retrieval, multimedia search, and cross-modal data 
+mining.
+CRediT authorship contribution statement
+Yunfei Chen: Writing – review & editing, Writing – original draft, 
+Project administration, Methodology, Conceptualization. Renwei Xia: 
+Visualization, Validation, Resources, Conceptualization. Zhan Yang: 
+Resources, Project administration, Funding acquisition, Conceptualiza-
+tion. Jun Long: Supervision, Resources, Project administration, Inves-
+tigation, Funding acquisition.
+Declaration of competing interest
+The authors declare that they have no known competing finan-
+cial interests or personal relationships that could have appeared to 
+influence the work reported in this paper.
+Acknowledgments
+This work is partially supported by the National Natural Science 
+Foundation of China (Nos. 62202501, U2003208), in part the Science 
+and Technology Research and Development Project of China State 
+Railway Group Company, Ltd. (Grant No. N2023Z020), and in part 
+by the Science and Technology Plan of Hunan Province under Grants 
+(2022JJ40638, 2023GK2013).
+Data availability
+Data will be made available on request.
+References
+[1] S.e.a. He, Category alignment adversarial learning for cross-modal retrieval, IEEE 
+Trans. Knowl. Data Eng. 35 (5) (2023) 4527–4538.
+[2] L. Yang, W. Zhang, Y. Miao, Y. Liang, X. Li, K.-K.R. Choo, R.H. Deng, Secure 
+and efficient cross-modal retrieval over encrypted multimodal data, IEEE Trans. 
+Comput. 74 (4) (2025) 1405–1417.
+[3] H. Zhang, Y. Yang, F. Qi, S. Qian, C. Xu, Active supervised cross-modal retrieval, 
+IEEE Trans. Pattern Anal. Mach. Intell. (2025) 1–15.
+Knowledge-Based Systems 319 (2025) 113522 
+11 
+
+===== PAGE 12 =====
+Y. Chen et al.
+[4] X. Shen, Y. Chen, S. Pan, W. Liu, Y. Zheng, Graph convolutional incomplete 
+multi-modal hashing, in: Proceedings of the 31st ACM International Conference 
+on Multimedia, MM ’23, 2023, pp. 7029–7037.
+[5] Y. Sun, Z. Ren, P. Hu, D. Peng, X. Wang, Hierarchical consensus hashing for 
+cross-modal retrieval, IEEE Trans. Multimed. 26 (2024) 824–836.
+[6] P. Hu, H. Zhu, J. Lin, D. Peng, Y.-P. Zhao, X. Peng, Unsupervised contrastive 
+cross-modal hashing, IEEE Trans. Pattern Anal. Mach. Intell. 45 (3) (2023) 
+3877–3889.
+[7] X. Pan, T. Ye, D. Han, S. Song, G. Huang, Contrastive language-image pre-training 
+with knowledge graphs, Adv. Neural Inf. Process. Syst. 35 (2022) 22895–22910.
+[8] M. Chen, Z. Wei, Z. Huang, B. Ding, Y. Li, Simple and deep graph convolu-
+tional networks, in: International Conference on Machine Learning, 2020, pp. 
+1725–1735.
+[9] Y. Cheng, X. Zhu, J. Qian, F. Wen, P. Liu, Cross-modal graph matching network 
+for image-text retrieval, ACM Trans. Multimed. Comput. Commun. Appl. (TOMM) 
+18 (4) (2022) 1–23.
+[10] L. Jin, Z. Li, Y. Pan, J. Tang, Relational consistency induced self-supervised 
+hashing for image retrieval, IEEE Trans. Neural Netw. Learn. Syst. 36 (1) (2025) 
+1482–1494.
+[11] Y. Sun, J. Dai, Z. Ren, Y. Chen, D. Peng, P. Hu, Dual self-paced cross-modal 
+hashing, in: Proceedings of the AAAI Conference on Artificial Intelligence, vol. 
+38, (14) 2024, pp. 15184–15192.
+[12] M. Liang, Y. Li, Y. Yu, X. Cao, Z. Xue, A. Li, K. Lu, Structures aware fine-grained 
+contrastive adversarial hashing for cross-media retrieval, IEEE Trans. Knowl. Data 
+Eng. 36 (7) (2024) 3514–3528.
+[13] Y. Wang, Y.-W. Zhan, Z.-D. Chen, X. Luo, X.-S. Xu, Multiple information 
+embedded hashing for large-scale cross-modal retrieval, IEEE Trans. Circuits Syst. 
+Video Technol. 34 (6) (2024) 5118–5131.
+[14] M. Liang, J. Du, Z. Liang, Y. Xing, W. Huang, Z. Xue, Self-supervised multi-modal 
+knowledge graph contrastive hashing for cross-modal search, in: Proceedings 
+of the AAAI Conference on Artificial Intelligence, vol. 38, (12) 2024, pp. 
+13744–13753.
+[15] X. Liang, E. Yang, Y. Yang, C. Deng, Multi-relational deep hashing for 
+cross-modal search, IEEE Trans. Image Process. 33 (2024) 3009–3020.
+[16] L. Fei, Z. He, W.K. Wong, Q. Zhu, S. Zhao, J. Wen, Semantic decomposition 
+and enhancement hashing for deep cross-modal retrieval, Pattern Recognit. 160 
+(2025) 111225.
+[17] H. Zhao, Z. Li, S. Wang, Z. Zhang, K. Li, Robust hashing with bilinear drift for 
+image-text retrieval, IEEE Trans. Circuits Syst. Video Technol. (2025) 1.
+[18] W. Fan, C. Zhang, H. Li, X. Jia, G. Wang, Three-stage semisupervised cross-modal 
+hashing with pairwise relations exploitation, IEEE Trans. Neural Netw. Learn. 
+Syst. 36 (1) (2025) 260–273.
+[19] H. Ni, J. Zhang, P. Kang, X. Fang, W. Sun, S. Xie, N. Han, Cross-modal hashing 
+with missing labels, Neural Netw. 165 (2023) 60–76.
+[20] Z. Song, Q. Su, J. Chen, Unsupervised hashing with contrastive learning by 
+exploiting similarity knowledge and hidden structure of data, in: Proceedings 
+of the 31st ACM International Conference on Multimedia, MM ’23, 2023, pp. 
+6350–6358.
+[21] X. Xia, G. Dong, F. Li, L. Zhu, X. Ying, When CLIP meets cross-modal hashing 
+retrieval: A new strong baseline, Inf. Fusion 100 (2023) 101968.
+[22] Y. Wu, B. Li, Z. Li, Revising similarity relationship hashing for unsupervised 
+cross-modal retrieval, Neurocomputing 614 (2025) 128844.
+[23] F. Zhong, C. Chu, Z. Zhu, Z. Chen, Hypergraph-enhanced hashing for unsuper-
+vised cross-modal retrieval via robust similarity guidance, in: Proceedings of 
+the 31st ACM International Conference on Multimedia, MM ’23, Association for 
+Computing Machinery, 2023, pp. 3517–3527.
+[24] X. Liu, J. Li, X. Nie, X. Zhang, Y. Yin, Fast unsupervised cross-modal hashing 
+with robust factorization and dual projection, ACM Trans. Multimed. Comput. 
+Commun. Appl. 20 (12) (2024) 1–21.
+[25] H. Meng, H. Zhang, L. Liu, D. Liu, X. Lu, X. Guo, Joint-modal graph convolutional 
+hashing for unsupervised cross-modal retrieval, Neurocomputing 595 (2024) 
+127911.
+[26] L. Zhu, X. Wu, J. Li, Z. Zhang, W. Guan, H.T. Shen, Work together: Correlation-
+identity reconstruction hashing for unsupervised cross-modal retrieval, IEEE 
+Trans. Knowl. Data Eng. 35 (9) (2023) 8838–8851.
+[27] L. Li, Z. Shu, Z. Yu, X.-J. Wu, Robust online hashing with label semantic 
+enhancement for cross-modal retrieval, Pattern Recognit. 145 (2024) 109972.
+[28] H. Li, C. Zhang, X. Jia, Y. Gao, C. Chen, Adaptive label correlation based 
+asymmetric discrete hashing for cross-modal retrieval, IEEE Trans. Knowl. Data 
+Eng. 35 (2) (2023) 1185–1199.
+[29] Y. Wang, F. Dong, K. Wang, X. Nie, Z.-D. Chen, Weighted cross-modal hashing 
+with label enhancement, Knowl.-Based Syst. 293 (2024) 111657.
+[30] S. Wang, H. Zhao, Z. Zhang, K. Li, Individual mapping and asymmetric dual 
+supervision for discrete cross-modal hashing, Expert Syst. Appl. 247 (2024) 
+123333.
+[31] Z. Li, T. Yao, L. Wang, Y. Li, G. Wang, Supervised contrastive discrete hashing 
+for cross-modal retrieval, Knowl.-Based Syst. 295 (2024) 111837.
+[32] T. Yao, R. Wang, J. Wang, Y. Li, J. Yue, L. Yan, Q. Tian, Efficient supervised 
+graph embedding hashing for large-scale cross-media retrieval, Pattern Recognit. 
+145 (2024) 109934.
+[33] X. Shen, G. Yu, Y. Chen, X. Yang, Y. Zheng, Graph convolutional semi-supervised 
+cross-modal hashing, in: Proceedings of the 32nd ACM International Conference 
+on Multimedia, MM ’24, 2024, pp. 5930–5938.
+[34] K. Liu, Y. Gong, Y. Cao, Z. Ren, D. Peng, Y. Sun, Dual semantic fusion 
+hashing for multi-label cross-modal retrieval, in: Proceedings of the Thirty-Third 
+International Joint Conference on Artificial Intelligence, IJCAI-24, 2024, pp. 
+4569–4577.
+[35] B.-W. Chen, J.-Y. Huang, Y.-H. Wu, Robust data-driven automation based on 
+relaxed supervised hashing with self-optimized labels, IEEE Trans. Autom. Sci. 
+Eng. 21 (1) (2024) 512–527.
+[36] R.-C. Tu, J. Jiang, Q. Lin, C. Cai, S. Tian, H. Wang, W. Liu, Unsupervised 
+cross-modal hashing with modality-interaction, IEEE Trans. Circuits Syst. Video 
+Technol. 33 (9) (2023) 5296–5308.
+[37] B. Zhang, Y. Zhang, J. Li, J. Chen, T. Akutsu, Y.-M. Cheung, H. Cai, Unsuper-
+vised dual deep hashing with semantic-index and content-code for cross-modal 
+retrieval, IEEE Trans. Pattern Anal. Mach. Intell. 47 (1) (2025) 387–399.
+[38] J. Cui, Z. He, Q. Huang, Y. Fu, Y. Li, J. Wen, Structure-aware contrastive hashing 
+for unsupervised cross-modal retrieval, Neural Netw. 174 (2024) 106211.
+[39] J. Wang, Z. Zeng, B. Chen, et al., Hugs bring double benefits: Unsupervised 
+cross-modal hashing with multi-granularity aligned transformers, Int. J. Comput. 
+Vis. 132 (2024) 2765–2797.
+[40] X. Kang, X. Liu, X. Zhang, W. Xue, X. Nie, S. Wang, Y. Yin, Unsupervised 
+online cross-modal hashing with multiple association exploitation, in: 2024 IEEE 
+International Conference on Multimedia and Expo, ICME, 2024, pp. 1–6.
+[41] X. Liu, J. Li, X. Nie, X. Zhang, S. Wang, Y. Yin, Scalable unsupervised hashing via 
+exploiting robust cross-modal consistency, IEEE Trans. Big Data 10 (4) (2024) 
+514–527.
+[42] Y. Wu, Z. Li, Mining similarity relationships for unsupervised cross-modal 
+hashing, in: 2024 IEEE International Conference on Multimedia and Expo, ICME, 
+2024, pp. 1–6.
+[43] M. Huiskes, M. Lew, The mir flickr retrieval evaluation, in: Proceedings of the 
+ACM International Conference on Multimedia Information Retrieval, 2008, pp. 
+39–43.
+[44] T.-S. Chua, J. Tang, R. Hong, H. Li, Z. Luo, Y. Zheng, Nus wide: a real-world 
+web image database from national university of singapore, in: Proceedings of the 
+ACM International Conference on Image and Video Retrieval, 2009, pp. 1–9.
+[45] T.-Y. Lin, M. Maire, S. Belongie, J. Hays, P. Perona, D. Ramanan, P. Dollár, 
+C. Zitnick, Microsoft coco: Common objects in context, in: Proceedings of the 
+European Conference on Computer Vision, vol. 8693, 2014, pp. 740–755.
+[46] D. Hu, F. Nie, X. Li, Deep binary reconstruction for cross-modal hashing, IEEE 
+Trans. Multimed. 21 (4) (2018) 973–985.
+[47] G. Wu, Z. Lin, J. Han, L. Liu, G. Ding, B. Zhang, J. Shen, Unsupervised deep 
+hashing via binary latent factor models for large-scale cross-modal retrieval, in: 
+International Joint Conference on Artificial Intelligence, vol. 1, (3) 2018, p. 5.
+[48] S. Liu, S. Qian, Y. Guan, J. Zhan, L. Ying, Joint-modal distribution-based 
+similarity hashing for large-scale unsupervised deep cross-modal retrieval, in: 
+Proceedings of the 43rd International ACM SIGIR Conference on Research and 
+Development in Information Retrieval, 2020, pp. 1379–1388.
+[49] S. Su, Z. Zhong, C. Zhang, Deep joint-semantics reconstructing hashing for 
+large-scale unsupervised cross-modal retrieval, in: 2019 IEEE/CVF International 
+Conference on Computer Vision, ICCV, 2019, pp. 3027–3035.
+[50] P.-F. Zhang, Y. Li, Z. Huang, X.-S. Xu, Aggregation-based graph convolutional 
+hashing for unsupervised cross-modal retrieval, IEEE Trans. Multimed. 24 (2022) 
+466–479.
+[51] H. Yu, S. Ding, L. Li, J. Wu, Self-attentive CLIP hashing for unsupervised cross-
+modal retrieval, in: Proceedings of the 4th ACM International Conference on 
+Multimedia, 2022, pp. 8:1–8:7.
+[52] Z. Shu, Y. Bai, D. Zhang, J. Yu, Z. Yu, X.-J. Wu, Specific class center guided 
+deep hashing for cross-modal retrieval, Inform. Sci. 609 (2022) 304–318.
+[53] B. Li, D. Yao, Z. Li, Rich: A rapid method for image-text cross-modal hash 
+retrieval, Displays 79 (2023) 102489.
+[54] L. Mingyong, L. Yewen, G. Mingyuan, M. Longfei, CLIP-based fusion-modal 
+reconstructing hashing for large-scale unsupervised cross-modal retrieval, Int. J. 
+Multimed. Inf. Retr. 12 (1) (2023) 2.
+[55] S. Xiong, L. Pan, X. Ma, Q. Hu, E. Beckman, Unsupervised deep hashing with 
+multiple similarity preservation for cross-modal image-text retrieval, Int. J. Mach. 
+Learn. Cybern. 15 (2024) 4423–4434.
+[56] Y. Yang, X. Zhang, Q. Zhu, W. Chen, K.-C. Wong, Q. Lin, CAGAN: Constrained 
+neural architecture search for GANs, Knowl.-Based Syst. 302 (2024) 112277.
+[57] L. van der Maaten, G. Hinton, Visualizing high-dimensional data using t-SNE, J. 
+Mach. Learn. Res. 9 (2008) 2579–2605.
+Knowledge-Based Systems 319 (2025) 113522 
+12 
