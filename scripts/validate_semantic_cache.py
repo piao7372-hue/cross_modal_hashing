@@ -17,6 +17,8 @@ if str(SRC_ROOT) not in sys.path:
 
 from semantic_similarity import load_semantic_similarity_config  # noqa: E402
 
+S2_MIN_STD = 1.0e-8
+S2_MIN_MAX_ABS = 1.0e-8
 
 
 def parse_args() -> argparse.Namespace:
@@ -27,14 +29,12 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-
 def _sha256_file(path: Path) -> str:
     digest = hashlib.sha256()
     with path.open("rb") as f:
         for chunk in iter(lambda: f.read(1024 * 1024), b""):
             digest.update(chunk)
     return digest.hexdigest()
-
 
 
 def _validate_sample_index_file(path: Path) -> tuple[int, str]:
@@ -53,7 +53,6 @@ def _validate_sample_index_file(path: Path) -> tuple[int, str]:
     return count, _sha256_file(path)
 
 
-
 def _row_sum_stats(m: sparse.csr_matrix) -> dict[str, float]:
     row_sum = np.asarray(m.sum(axis=1)).reshape(-1)
     return {
@@ -64,13 +63,11 @@ def _row_sum_stats(m: sparse.csr_matrix) -> dict[str, float]:
     }
 
 
-
 def _density(m: sparse.csr_matrix) -> float:
     n = m.shape[0]
     if n == 0:
         return 0.0
     return float(m.nnz) / float(n * n)
-
 
 
 def _avg_degree(m: sparse.csr_matrix) -> float:
@@ -80,7 +77,6 @@ def _avg_degree(m: sparse.csr_matrix) -> float:
     return float(m.nnz) / float(n)
 
 
-
 def _symmetry_error(m: sparse.csr_matrix) -> float:
     diff = (m - m.T).tocsr()
     if diff.nnz == 0:
@@ -88,12 +84,132 @@ def _symmetry_error(m: sparse.csr_matrix) -> float:
     return float(np.max(np.abs(diff.data)))
 
 
-
 def _max_abs_sparse(m: sparse.csr_matrix) -> float:
     if m.nnz == 0:
         return 0.0
     return float(np.max(np.abs(m.data)))
 
+
+def _require_int(value: Any, field_name: str) -> int:
+    if isinstance(value, int):
+        return value
+    raise RuntimeError(f"{field_name} must be int")
+
+
+def _validate_s2_nondegenerate(s2: sparse.csr_matrix, expected_n: int) -> dict[str, float | int]:
+    if s2.shape != (expected_n, expected_n):
+        raise RuntimeError(f"S2 shape mismatch: expected ({expected_n}, {expected_n}), got {s2.shape}")
+    if s2.nnz <= 0:
+        raise RuntimeError("S2 is empty (nnz=0), considered degenerate")
+
+    data = np.asarray(s2.data, dtype=np.float32)
+    if not np.all(np.isfinite(data)):
+        raise RuntimeError("S2 contains non-finite values")
+
+    std_val = float(np.std(data))
+    max_abs_val = float(np.max(np.abs(data)))
+    min_val = float(np.min(data))
+    max_val = float(np.max(data))
+
+    if max_abs_val <= S2_MIN_MAX_ABS:
+        raise RuntimeError(
+            f"S2 max abs is too small ({max_abs_val}); expected > {S2_MIN_MAX_ABS} for non-degeneracy"
+        )
+    if std_val <= S2_MIN_STD:
+        raise RuntimeError(
+            f"S2 std is too small ({std_val}); expected > {S2_MIN_STD} for non-degeneracy"
+        )
+    if max_val <= min_val:
+        raise RuntimeError("S2 value range is collapsed (max <= min), considered degenerate")
+
+    return {
+        "nnz": int(s2.nnz),
+        "std": std_val,
+        "max_abs": max_abs_val,
+        "min": min_val,
+        "max": max_val,
+    }
+
+
+def _validate_two_stage_topk_edge_counts(
+    *,
+    meta: dict[str, Any],
+    n: int,
+    s_high: sparse.csr_matrix,
+) -> dict[str, int]:
+    k_candidate = _require_int(meta.get("k_candidate"), "meta.k_candidate")
+    k_final = _require_int(meta.get("k_final"), "meta.k_final")
+    if k_candidate < k_final:
+        raise RuntimeError(f"k_candidate ({k_candidate}) must be >= k_final ({k_final})")
+    if k_final <= 0:
+        raise RuntimeError("k_final must be > 0")
+
+    stats_obj = meta.get("stats")
+    if not isinstance(stats_obj, dict):
+        raise RuntimeError("meta.stats must be a mapping")
+    candidate_nnz = _require_int(stats_obj.get("candidate_nnz"), "meta.stats.candidate_nnz")
+    final_nnz_meta = _require_int(stats_obj.get("final_nnz"), "meta.stats.final_nnz")
+    final_nnz_actual = int(s_high.nnz)
+
+    if final_nnz_meta != final_nnz_actual:
+        raise RuntimeError(
+            f"final_nnz mismatch: meta.stats.final_nnz={final_nnz_meta}, S_high.nnz={final_nnz_actual}"
+        )
+
+    k_eff_candidate = min(k_candidate, n)
+    k_eff_final = min(k_final, n)
+
+    candidate_nnz_min = n * k_eff_candidate
+    candidate_nnz_max = n * min(n, (2 * k_eff_candidate) + 1)
+    if candidate_nnz < candidate_nnz_min or candidate_nnz > candidate_nnz_max:
+        raise RuntimeError(
+            "candidate_nnz out of theoretical bounds for stage-1 union support: "
+            f"{candidate_nnz} not in [{candidate_nnz_min}, {candidate_nnz_max}]"
+        )
+
+    final_nnz_min = n
+    final_nnz_max = n * k_eff_final
+    if final_nnz_actual < final_nnz_min or final_nnz_actual > final_nnz_max:
+        raise RuntimeError(
+            "final_nnz out of theoretical bounds for stage-2 top-k support: "
+            f"{final_nnz_actual} not in [{final_nnz_min}, {final_nnz_max}]"
+        )
+
+    if candidate_nnz < final_nnz_actual:
+        raise RuntimeError(
+            f"candidate_nnz ({candidate_nnz}) must be >= final_nnz ({final_nnz_actual})"
+        )
+
+    row_nnz = np.diff(s_high.indptr)
+    if row_nnz.shape[0] != n:
+        raise RuntimeError("S_high row nnz shape mismatch")
+    if np.any(row_nnz <= 0):
+        raise RuntimeError("S_high has rows without edges after stage-2 top-k")
+    if np.any(row_nnz > k_eff_final):
+        max_row_nnz = int(np.max(row_nnz))
+        raise RuntimeError(
+            f"S_high row nnz exceeds k_final bound: max_row_nnz={max_row_nnz}, k_eff_final={k_eff_final}"
+        )
+
+    diag_high = s_high.diagonal()
+    if diag_high.shape[0] != n:
+        raise RuntimeError("S_high diagonal length mismatch")
+    if np.any(diag_high <= 0):
+        raise RuntimeError("S_high diagonal must be strictly positive (self-loop required)")
+
+    return {
+        "k_candidate": int(k_candidate),
+        "k_final": int(k_final),
+        "candidate_nnz": int(candidate_nnz),
+        "final_nnz_meta": int(final_nnz_meta),
+        "final_nnz_actual": int(final_nnz_actual),
+        "candidate_nnz_min": int(candidate_nnz_min),
+        "candidate_nnz_max": int(candidate_nnz_max),
+        "final_nnz_min": int(final_nnz_min),
+        "final_nnz_max": int(final_nnz_max),
+        "row_nnz_min": int(np.min(row_nnz)),
+        "row_nnz_max": int(np.max(row_nnz)),
+    }
 
 
 def main() -> int:
@@ -134,23 +250,39 @@ def main() -> int:
     if lineage.get("sample_index_hash") != upstream_sample_index_hash:
         raise RuntimeError("lineage.sample_index_hash mismatch")
 
-    required_always = ["S_high.npz", "S_graph.npz"]
-    for name in required_always:
+    formal_required = ["S2.npz", "S_high.npz"]
+    for name in formal_required:
         if not (semantic_dir / name).exists():
             raise FileNotFoundError(f"Missing required matrix file: {semantic_dir / name}")
 
+    optional_intermediate = ["S_I.npz", "S_T.npz", "S1.npz", "S_fused.npz"]
+    for name in optional_intermediate:
+        path = semantic_dir / name
+        if not path.exists():
+            continue
+        mat = sparse.load_npz(path).tocsr().astype(np.float32)
+        if mat.shape[0] != mat.shape[1]:
+            raise RuntimeError(f"{name} must be square")
+
     s_high = sparse.load_npz(semantic_dir / "S_high.npz").tocsr().astype(np.float32)
-    s_graph = sparse.load_npz(semantic_dir / "S_graph.npz").tocsr().astype(np.float32)
+    s2 = sparse.load_npz(semantic_dir / "S2.npz").tocsr().astype(np.float32)
+    s_graph_path = semantic_dir / "S_graph.npz"
+    has_s_graph = s_graph_path.exists()
+    s_graph = sparse.load_npz(s_graph_path).tocsr().astype(np.float32) if has_s_graph else None
 
     n = int(s_high.shape[0])
     if s_high.shape[0] != s_high.shape[1]:
         raise RuntimeError("S_high must be square")
-    if s_graph.shape[0] != s_graph.shape[1]:
-        raise RuntimeError("S_graph must be square")
-    if s_graph.shape != s_high.shape:
-        raise RuntimeError(f"S_graph shape {s_graph.shape} != S_high shape {s_high.shape}")
+    if has_s_graph and s_graph is not None:
+        if s_graph.shape[0] != s_graph.shape[1]:
+            raise RuntimeError("S_graph must be square")
+        if s_graph.shape != s_high.shape:
+            raise RuntimeError(f"S_graph shape {s_graph.shape} != S_high shape {s_high.shape}")
     if n != upstream_rows:
         raise RuntimeError(f"N mismatch: semantic={n}, upstream feature sample_index rows={upstream_rows}")
+
+    s2_stats = _validate_s2_nondegenerate(s2=s2, expected_n=n)
+    topk_edge_stats = _validate_two_stage_topk_edge_counts(meta=meta, n=n, s_high=s_high)
 
     if n > cfg.runtime.dense_debug_max_rows:
         matrix_format = meta.get("output", {}).get("matrix_format")
@@ -164,19 +296,21 @@ def main() -> int:
             f"S_high row-sum residual too large: {max_row_sum_res} > {cfg.validation.row_sum_atol}"
         )
 
-    sym_err = _symmetry_error(s_graph)
-    if sym_err > cfg.validation.symmetry_atol:
-        raise RuntimeError(f"S_graph symmetry error too large: {sym_err} > {cfg.validation.symmetry_atol}")
+    sym_err = 0.0
+    if has_s_graph and s_graph is not None:
+        sym_err = _symmetry_error(s_graph)
+        if sym_err > cfg.validation.symmetry_atol:
+            raise RuntimeError(f"S_graph symmetry error too large: {sym_err} > {cfg.validation.symmetry_atol}")
 
-    min_graph_val = float(np.min(s_graph.data)) if s_graph.nnz > 0 else 0.0
-    if min_graph_val < -cfg.validation.symmetry_atol:
-        raise RuntimeError(f"S_graph has negative values below tolerance: min={min_graph_val}")
+        min_graph_val = float(np.min(s_graph.data)) if s_graph.nnz > 0 else 0.0
+        if min_graph_val < -cfg.validation.symmetry_atol:
+            raise RuntimeError(f"S_graph has negative values below tolerance: min={min_graph_val}")
 
-    diag = s_graph.diagonal()
-    if diag.shape[0] != n:
-        raise RuntimeError("S_graph diagonal length mismatch")
-    if np.any(diag <= 0):
-        raise RuntimeError("S_graph diagonal must be strictly positive for all rows (self-loop required)")
+        diag = s_graph.diagonal()
+        if diag.shape[0] != n:
+            raise RuntimeError("S_graph diagonal length mismatch")
+        if np.any(diag <= 0):
+            raise RuntimeError("S_graph diagonal must be strictly positive for all rows (self-loop required)")
 
     if pipeline_mode == "with_pseudo":
         s_pseudo_path = semantic_dir / "S_pseudo.npz"
@@ -204,8 +338,15 @@ def main() -> int:
         if meta.get("entrypoints", {}).get("supervision_target") != "unavailable":
             raise RuntimeError("high_only mode must set entrypoints.supervision_target = unavailable")
 
-    if meta.get("entrypoints", {}).get("propagation_graph") != "S_graph":
-        raise RuntimeError("entrypoints.propagation_graph must be S_graph")
+    propagation_graph_entry = meta.get("entrypoints", {}).get("propagation_graph")
+    if has_s_graph:
+        if propagation_graph_entry != "S_graph":
+            raise RuntimeError("entrypoints.propagation_graph must be S_graph when S_graph.npz exists")
+    else:
+        if propagation_graph_entry not in {"unavailable", None}:
+            raise RuntimeError(
+                "entrypoints.propagation_graph must be unavailable when S_graph.npz is not saved"
+            )
 
     result: dict[str, Any] = {
         "dataset": args.dataset,
@@ -214,28 +355,33 @@ def main() -> int:
         "rows": n,
         "density": {
             "S_high": _density(s_high),
-            "S_graph": _density(s_graph),
         },
         "avg_degree": {
             "S_high": _avg_degree(s_high),
-            "S_graph": _avg_degree(s_graph),
-        },
-        "symmetry_error": {
-            "S_graph": sym_err,
         },
         "row_sum_stats": {
             "S_high": _row_sum_stats(s_high),
-            "S_graph": _row_sum_stats(s_graph),
         },
+        "s2_stats": s2_stats,
+        "topk_edge_stats": topk_edge_stats,
         "checks": {
             "sample_index_hash_match": True,
             "N_match": True,
+            "s2_nondegenerate_ok": True,
+            "two_stage_topk_edge_counts_ok": True,
             "s_high_row_sum_ok": True,
-            "s_graph_symmetry_ok": True,
-            "s_graph_nonnegative_ok": True,
-            "s_graph_self_loop_ok": True,
+            "optional_intermediate_shape_ok": True,
+            "s_graph_present": has_s_graph,
+            "s_graph_symmetry_ok": True if has_s_graph else "skipped",
+            "s_graph_nonnegative_ok": True if has_s_graph else "skipped",
+            "s_graph_self_loop_ok": True if has_s_graph else "skipped",
         },
     }
+    if has_s_graph and s_graph is not None:
+        result["density"]["S_graph"] = _density(s_graph)
+        result["avg_degree"]["S_graph"] = _avg_degree(s_graph)
+        result["symmetry_error"] = {"S_graph": sym_err}
+        result["row_sum_stats"]["S_graph"] = _row_sum_stats(s_graph)
     print(json.dumps(result, ensure_ascii=False, indent=2))
     return 0
 

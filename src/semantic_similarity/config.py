@@ -41,6 +41,7 @@ class SemanticConfig:
     formula_version: str
     pipeline_mode: str
     debug_save_intermediates: bool
+    save_graph_compat_output: bool
     softmax_domain: str
     symmetrization_rule: str
     sparsification_strategy: str
@@ -123,6 +124,12 @@ def _as_bool(value: Any, name: str) -> bool:
     raise ValueError(f"`{name}` must be bool")
 
 
+def _as_bool_with_default(value: Any, name: str, default: bool) -> bool:
+    if value is None:
+        return default
+    return _as_bool(value, name)
+
+
 def _as_optional_int(value: Any, name: str) -> int | None:
     if value is None:
         return None
@@ -187,6 +194,12 @@ def load_semantic_similarity_config(project_root: Path, config_path: Path) -> Se
         pipeline_mode=_as_str(semantic_raw.get("pipeline_mode"), "semantic.pipeline_mode"),
         debug_save_intermediates=_as_bool(
             semantic_raw.get("debug_save_intermediates"), "semantic.debug_save_intermediates"
+        ),
+        # Compatibility-only switch for saving S_graph in current semantic-only phase.
+        save_graph_compat_output=_as_bool_with_default(
+            semantic_raw.get("save_graph_compat_output"),
+            "semantic.save_graph_compat_output",
+            False,
         ),
         softmax_domain=_as_str(semantic_raw.get("softmax_domain"), "semantic.softmax_domain"),
         symmetrization_rule=_as_str(semantic_raw.get("symmetrization_rule"), "semantic.symmetrization_rule"),

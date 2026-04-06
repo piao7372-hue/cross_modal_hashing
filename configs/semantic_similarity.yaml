@@ -13,7 +13,10 @@ runtime:
 semantic:
   formula_version: semantic_similarity_v2_dual_matrix
   pipeline_mode: high_only
+  # debug_save_intermediates controls extra diagnostics only; formal outputs are always saved.
   debug_save_intermediates: false
+  # Compatibility-only output switch; default semantic-only path does not save S_graph.
+  save_graph_compat_output: false
   softmax_domain: candidate_subgraph
   symmetrization_rule: undirected_union_arithmetic_mean
   sparsification_strategy: two_stage_topk

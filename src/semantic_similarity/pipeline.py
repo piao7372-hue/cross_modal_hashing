@@ -30,27 +30,43 @@ class SemanticStats:
 
 
 
-def _build_role_map_and_entrypoints(mode: str) -> tuple[dict[str, str], dict[str, str]]:
+def _build_role_map_and_entrypoints(
+    mode: str,
+    *,
+    save_graph_compat_output: bool,
+) -> tuple[dict[str, str], dict[str, str]]:
     if mode == "high_only":
         role_map = {
+            "S_I": "intra_modal_image_base",
+            "S_T": "intra_modal_text_base",
+            "S1": "intra_modal_fusion",
+            "S2": "cross_modal_direction_aware",
+            "S_fused": "high_dim_fused",
             "S_high": "semantic_candidate",
-            "S_graph": "propagation_graph",
         }
+        if save_graph_compat_output:
+            role_map["S_graph"] = "propagation_graph"
         entrypoints = {
             "supervision_target": "unavailable",
-            "propagation_graph": "S_graph",
+            "propagation_graph": "S_graph" if save_graph_compat_output else "unavailable",
         }
         return role_map, entrypoints
     if mode == "with_pseudo":
         role_map = {
+            "S_I": "intra_modal_image_base",
+            "S_T": "intra_modal_text_base",
+            "S1": "intra_modal_fusion",
+            "S2": "cross_modal_direction_aware",
+            "S_fused": "high_dim_fused",
             "S_high": "semantic_candidate",
             "S_pseudo": "pseudo_structure",
             "S_final": "supervision_target",
-            "S_graph": "propagation_graph",
         }
+        if save_graph_compat_output:
+            role_map["S_graph"] = "propagation_graph"
         entrypoints = {
             "supervision_target": "S_final",
-            "propagation_graph": "S_graph",
+            "propagation_graph": "S_graph" if save_graph_compat_output else "unavailable",
         }
         return role_map, entrypoints
     raise RuntimeError(f"Unsupported mode: {mode}")
@@ -105,18 +121,33 @@ def run_semantic_similarity(
 
     saved: list[str] = []
 
-    # Default output strategy: save S_high / S_graph only.
-    for key in ["S_high", "S_graph"]:
+    # Current phase formal outputs (default path): minimal contract for semantic stage.
+    formal_output_keys = ["S2", "S_high"]
+    for key in formal_output_keys:
+        if key not in matrices:
+            raise RuntimeError(f"Missing required formal semantic matrix: {key}")
         path = output_dir / f"{key}.npz"
         save_sparse_npz(path, matrices[key])
         saved.append(path.name)
 
+    # Optional intermediate outputs for debugging/auditing only.
     if config.semantic.debug_save_intermediates:
-        for key in ["S_I", "S_T", "S1", "S2", "S_fused"]:
-            if key in matrices:
-                path = output_dir / f"{key}.npz"
-                save_sparse_npz(path, matrices[key])
-                saved.append(path.name)
+        for key in ["S_I", "S_T", "S1", "S_fused"]:
+            if key not in matrices:
+                raise RuntimeError(
+                    f"debug_save_intermediates=true requires intermediate matrix: {key}"
+                )
+            path = output_dir / f"{key}.npz"
+            save_sparse_npz(path, matrices[key])
+            saved.append(path.name)
+
+    # Compatibility-only output for propagation graph in current phase.
+    if config.semantic.save_graph_compat_output:
+        if "S_graph" not in matrices:
+            raise RuntimeError("save_graph_compat_output=true requires S_graph matrix")
+        path = output_dir / "S_graph.npz"
+        save_sparse_npz(path, matrices["S_graph"])
+        saved.append(path.name)
 
     if config.semantic.pipeline_mode == "with_pseudo":
         # with_pseudo writes both supervision matrices only when pseudo source is fully ready.
@@ -127,7 +158,27 @@ def run_semantic_similarity(
             save_sparse_npz(path, matrices[key])
             saved.append(path.name)
 
-    role_map, entrypoints = _build_role_map_and_entrypoints(config.semantic.pipeline_mode)
+    role_map, entrypoints = _build_role_map_and_entrypoints(
+        config.semantic.pipeline_mode,
+        save_graph_compat_output=config.semantic.save_graph_compat_output,
+    )
+
+    stats_obj: dict[str, Any] = {
+        "rows": features.rows,
+        "dim": features.dim,
+        "candidate_nnz": graph_result.stats.get("candidate_nnz"),
+        "final_nnz": graph_result.stats.get("final_nnz"),
+        "density": {
+            "S_high": density_of(matrices["S_high"]),
+        },
+        "avg_degree": {
+            "S_high": avg_degree_of(matrices["S_high"]),
+        },
+    }
+    if config.semantic.save_graph_compat_output:
+        stats_obj["s_graph_nnz"] = graph_result.stats.get("s_graph_nnz")
+        stats_obj["density"]["S_graph"] = density_of(matrices["S_graph"])
+        stats_obj["avg_degree"]["S_graph"] = avg_degree_of(matrices["S_graph"])
 
     meta: dict[str, Any] = {
         "contract_version": "semantic_cache_v1",
@@ -170,22 +221,9 @@ def run_semantic_similarity(
             "matrix_format": "csr_npz",
             "saved_files": saved + ["meta.json"],
             "debug_save_intermediates": config.semantic.debug_save_intermediates,
+            "save_graph_compat_output": config.semantic.save_graph_compat_output,
         },
-        "stats": {
-            "rows": features.rows,
-            "dim": features.dim,
-            "candidate_nnz": graph_result.stats.get("candidate_nnz"),
-            "final_nnz": graph_result.stats.get("final_nnz"),
-            "s_graph_nnz": graph_result.stats.get("s_graph_nnz"),
-            "density": {
-                "S_high": density_of(matrices["S_high"]),
-                "S_graph": density_of(matrices["S_graph"]),
-            },
-            "avg_degree": {
-                "S_high": avg_degree_of(matrices["S_high"]),
-                "S_graph": avg_degree_of(matrices["S_graph"]),
-            },
-        },
+        "stats": stats_obj,
     }
     if pseudo_meta is not None:
         meta.update(pseudo_meta)

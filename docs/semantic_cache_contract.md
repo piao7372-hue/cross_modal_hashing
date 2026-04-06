@@ -58,16 +58,23 @@ Sparse implementation is only an acceleration of this dense definition; it must 
 
 ## Pipeline Modes
 ### `high_only`
-Outputs:
-1. `S_high.npz`
-2. `S_graph.npz`
+Outputs (current default semantic-only phase):
+1. `S2.npz`
+2. `S_high.npz`
 3. `meta.json`
-4. optional intermediates (`S_I/S_T/S1/S2/S_fused`) only when `debug_save_intermediates=true`
+
+Optional outputs:
+1. `S_I.npz`
+2. `S_T.npz`
+3. `S1.npz`
+4. `S_fused.npz`
+5. `S_graph.npz` (compatibility switch; not default main-path output)
 
 Meta requirements:
 1. `pipeline_mode = high_only`
 2. `entrypoints.supervision_target = unavailable`
-3. `entrypoints.propagation_graph = S_graph`
+3. `entrypoints.propagation_graph = unavailable` by default in current phase
+4. if compatibility graph output is enabled, `entrypoints.propagation_graph = S_graph`
 
 ### `with_pseudo`
 Outputs (additional):

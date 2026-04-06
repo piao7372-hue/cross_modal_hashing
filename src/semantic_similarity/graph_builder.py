@@ -179,15 +179,15 @@ def build_graph_matrices(
     s_graph_mat = symmetric_normalize(a_tilde)
 
     out: dict[str, sparse.csr_matrix] = {
+        "S_I": s_i_mat,
+        "S_T": s_t_mat,
+        "S1": s1_mat,
+        "S2": s2_mat,
+        "S_fused": s_fused_mat,
         "S_high": s_high_mat,
+        # Keep S_graph available for compatibility paths; not part of current default formal outputs.
         "S_graph": s_graph_mat,
     }
-    if semantic_cfg.debug_save_intermediates:
-        out["S_I"] = s_i_mat
-        out["S_T"] = s_t_mat
-        out["S1"] = s1_mat
-        out["S2"] = s2_mat
-        out["S_fused"] = s_fused_mat
 
     stats: dict[str, float | int | str] = {
         "rows": n,
