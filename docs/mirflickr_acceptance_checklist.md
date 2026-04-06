@@ -1,5 +1,10 @@
 # MIRFlickr Raw Cleaning Acceptance Checklist (Draft)
 
+## Scope Note (2026-04 Sync)
+1. This file is a MIRFlickr cleaning-stage acceptance artifact.
+2. It is a historical sub-stage document and does not define the current full-project phase.
+3. Current implementation status is determined by repository code/config first, and aligned with `docs/project_status.md` plus `docs/semantic_cache_contract.md`.
+
 ## Current phase
 1. Scope is dataset cleaning/data layer only.
 2. Out of scope: split, feature extraction, training, evaluation, model, loss.

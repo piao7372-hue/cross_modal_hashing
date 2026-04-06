@@ -1,7 +1,12 @@
 # MIRFlickr Handoff
 
+## 文档作用域说明（2026-04 状态同步）
+- 本文档是 MIRFlickr 数据清洗子阶段的 handoff 记录，用于保留该子阶段的历史状态。
+- 本文档不代表当前全项目阶段，不单独定义项目当前主路径。
+- 当前实现状态以仓库代码与配置为准，并结合 `docs/project_status.md` 与 `docs/semantic_cache_contract.md` 统一判断。
+
 ## 1. 当前阶段
-- 当前仍是 data cleaning / data layer only。
+- 本文档记录时对应阶段为 data cleaning / data layer only（历史子阶段口径）。
 
 ## 2. 已完成的关键工作
 - MIRFlickr raw inventory 已完成。

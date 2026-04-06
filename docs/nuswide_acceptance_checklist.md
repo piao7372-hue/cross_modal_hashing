@@ -1,5 +1,10 @@
 # NUS-WIDE 清洗验收清单（v1）
 
+## 文档作用域说明（2026-04 状态同步）
+- 本文档是 NUS-WIDE 数据清洗子阶段的验收记录。
+- 本文档属于历史子阶段文档，不代表当前全项目阶段。
+- 当前实现状态以仓库代码与配置为准，并结合 `docs/project_status.md` 与 `docs/semantic_cache_contract.md` 统一判断。
+
 ## 1) 本次清洗输入文件
 - `data/raw/nuswide/images/*.jpg`
 - `data/raw/nuswide/NUS_WID_Tags/All_Tags.txt`

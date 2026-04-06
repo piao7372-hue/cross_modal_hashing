@@ -1,5 +1,10 @@
 # MSCOCO Freeze Blockers (Decision-Landed, Pre-Freeze)
 
+## Scope Note (2026-04 Sync)
+1. This file is a MSCOCO cleaning-stage decision record.
+2. It is a historical sub-stage document and does not define the current full-project phase.
+3. Current implementation status is determined by repository code/config first, and aligned with `docs/project_status.md` plus `docs/semantic_cache_contract.md`.
+
 ## Scope
 This file records blocker decisions already confirmed by human review.
 It does not start implementation by itself and does not replace count-freeze closure.
@@ -148,4 +153,4 @@ References:
 
 ## Current Gate Statement
 Decision blockers B1-B8 are landed as confirmed choices.
-MSCOCO still remains pre-implementation until count-freeze preparation is closed.
+The "pre-implementation" wording in this file is a historical statement at record time.

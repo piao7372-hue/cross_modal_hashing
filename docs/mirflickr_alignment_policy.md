@@ -1,11 +1,16 @@
 # MIRFlickr Canonical Raw Alignment Policy (Draft)
 
+## Scope Note (2026-04 Sync)
+1. This file is a MIRFlickr cleaning-stage alignment policy artifact.
+2. It is a historical sub-stage document and does not define the current full-project phase.
+3. Current implementation status is determined by repository code/config first, and aligned with `docs/project_status.md` plus `docs/semantic_cache_contract.md`.
+
 ## 1. Purpose
 This document defines the canonical raw alignment policy for MIRFlickr in this repository.
 It applies to dataset cleaning/data layer only.
 
 ## 2. Current Phase / Out Of Scope
-Current phase is dataset cleaning and filtering.
+In the cleaning sub-stage covered by this document, phase is dataset cleaning and filtering.
 The following are out of scope for this policy:
 
 1. feature extraction

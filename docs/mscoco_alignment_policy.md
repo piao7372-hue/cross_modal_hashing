@@ -1,5 +1,10 @@
 # MSCOCO Canonical Raw Alignment Policy (Decision-Synced Draft)
 
+## Scope Note (2026-04 Sync)
+1. This file is a MSCOCO cleaning-stage alignment policy artifact.
+2. It is a historical sub-stage document and does not define the current full-project phase.
+3. Current implementation status is determined by repository code/config first, and aligned with `docs/project_status.md` plus `docs/semantic_cache_contract.md`.
+
 ## 1. Purpose
 This document records the currently effective MSCOCO raw cleaning policy decisions for planning.
 Scope is limited to `data cleaning / data layer` and does not authorize implementation by itself.
@@ -134,4 +139,4 @@ Row-level unique id format:
 ## 12. Draft-Only Statement
 This is a decision-synced policy draft.
 It is not an implementation artifact.
-Cleaner/config/pipeline changes remain out of scope in this step.
+The out-of-scope wording above is scoped to this cleaning-policy document itself.

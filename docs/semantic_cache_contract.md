@@ -1,4 +1,4 @@
-﻿# Semantic Cache Contract (Stage: Semantic Similarity / Semantic Graph / Supervision Matrix)
+# Semantic Cache Contract (Stage: Semantic Similarity / Semantic Graph / Supervision Matrix)
 
 ## Scope
 This document defines only the semantic matrix layer between feature cache and downstream backbone/loss.
@@ -6,10 +6,21 @@ Out of scope:
 1. SCH-KANH backbone implementation
 2. loss/training/evaluation implementation
 
+## Status And Source-Of-Truth
+1. This contract is a semantic-stage contract document; it does not redefine cleaning/feature stages.
+2. Current implementation status must be judged by repository code/config and validator behavior first.
+3. If any historical note conflicts with current code/config behavior, code/config behavior is authoritative.
+4. Repository default active path is `pipeline_mode=high_only` with formal outputs:
+5. `S2.npz`
+6. `S_high.npz`
+7. `meta.json`
+8. `with_pseudo` is a reserved optional path and is not the default active path in current config.
+
 ## Input Contract
 1. Engineering inputs are `X_I` and `X_T` from feature cache.
-2. If a document uses `F_I/F_T`, treat them as aliases of `X_I/X_T`.
-3. Sample order must strictly follow upstream `sample_index` order.
+2. Current implementation and this contract use `X_I/X_T` as the default notation.
+3. Historical notes may contain `F_I/F_T`; treat them only as legacy aliases of `X_I/X_T`.
+4. Sample order must strictly follow upstream `sample_index` order.
 
 ## Fixed Matrix Roles
 1. `S_I`, `S_T`: intra-modal base similarities
@@ -77,18 +88,19 @@ Meta requirements:
 4. if compatibility graph output is enabled, `entrypoints.propagation_graph = S_graph`
 
 ### `with_pseudo`
-Outputs (additional):
+Outputs (additional on top of default formal outputs):
 1. `S_pseudo.npz`
 2. `S_final.npz`
 
 Meta requirements:
 1. `pipeline_mode = with_pseudo`
 2. `entrypoints.supervision_target = S_final`
-3. `entrypoints.propagation_graph = S_graph`
-4. include pseudo-source fields (for example `pseudo_source_mode`, `z_source`, `clustering_method`, `n_clusters`, `pseudo_seed`)
+3. `entrypoints.propagation_graph = S_graph` only when compatibility graph output is enabled and `S_graph.npz` is saved
+4. otherwise `entrypoints.propagation_graph = unavailable`
+5. include pseudo-source fields (for example `pseudo_source_mode`, `z_source`, `clustering_method`, `n_clusters`, `pseudo_seed`)
 
 Fail-fast rule:
-If pseudo source is unconfigured/incomplete, `with_pseudo` must fail fast and must not write `S_pseudo/S_final`.
+If pseudo source is unconfigured/incomplete, `with_pseudo` must fail fast before semantic cache outputs are written.
 
 ## Output Directory
 `data/processed/<dataset>/semantic_cache/<semantic_set_id>/`

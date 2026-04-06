@@ -1,5 +1,10 @@
 # NUS-WIDE Canonical Raw Alignment Policy
 
+## Scope Note (2026-04 Sync)
+1. This file is a NUS-WIDE cleaning-stage alignment policy artifact.
+2. It is a historical sub-stage document and does not define the current full-project phase.
+3. Current implementation status is determined by repository code/config first, and aligned with `docs/project_status.md` plus `docs/semantic_cache_contract.md`.
+
 ## Purpose
 This document defines the canonical alignment policy for NUS-WIDE raw data cleaning in this repository.
 It applies to dataset cleaning only and does not cover feature extraction, training, evaluation, or model code.

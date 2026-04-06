@@ -1,10 +1,15 @@
 # MSCOCO Raw Inventory (Planning-Only, Draft)
 
+## Scope Note (2026-04 Sync)
+1. This file is a MSCOCO cleaning-stage inventory artifact.
+2. It is a historical sub-stage document and does not define the current full-project phase.
+3. Current implementation status is determined by repository code/config first, and aligned with `docs/project_status.md` plus `docs/semantic_cache_contract.md`.
+
 ## 1. Scope And Boundary
-- This document records only raw data inventory facts for MSCOCO under `data/raw/mscoco/`.
-- This is for data cleaning planning bootstrap only.
-- This document does **not** freeze cleaning policy.
-- This document does **not** introduce cleaner implementation, dataset config, or pipeline registration.
+- This document records raw data inventory facts captured for MSCOCO under `data/raw/mscoco/`.
+- This document was written for cleaning-stage planning bootstrap.
+- This document does **not** freeze cleaning policy by itself.
+- This document did **not** serve as cleaner implementation, dataset config, or pipeline registration.
 
 ## 2. Baseline Traceability
 - Freeze baseline tag (existing): `data-cleaning-freeze-20260328` -> `f384ed6`.

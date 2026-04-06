@@ -1,8 +1,13 @@
 # MSCOCO Count Freeze Preparation (Pre-Implementation)
 
+## Scope Note (2026-04 Sync)
+1. This file is a MSCOCO cleaning-stage count-freeze preparation artifact.
+2. It is a historical sub-stage document and does not define the current full-project phase.
+3. Current implementation status is determined by repository code/config first, and aligned with `docs/project_status.md` plus `docs/semantic_cache_contract.md`.
+
 ## 1. Purpose
-This document prepares count-freeze inputs after blocker decisions B1-B8 were confirmed.
-It does not start cleaner/config/pipeline implementation.
+This document recorded count-freeze inputs after blocker decisions B1-B8 were confirmed.
+It did not start cleaner/config/pipeline implementation by itself.
 
 ## 2. Confirmed Policy Inputs Used For Count Prep
 1. Canonical scope: `train2014 + val2014` only (`test2014` excluded).
