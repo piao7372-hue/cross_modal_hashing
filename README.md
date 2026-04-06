@@ -18,5 +18,8 @@ Keep processed outputs under:
 - data/processed/
 - outputs/
 
+## Local cache and temp directories
+`.cache/` and `.tmp_pip/` are local runtime cache/temp directories. They are not source-of-truth for project status. Avoid keeping Hugging Face or pip temporary caches in the repo workspace long-term. For current project state and boundaries, use `docs/project_status.md`, `docs/semantic_cache_contract.md`, and `AGENTS.md`.
+
 ## First task for Codex
 Ask Codex to inspect the repository and propose a plan before writing code.

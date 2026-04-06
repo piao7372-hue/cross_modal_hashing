@@ -4,3 +4,8 @@ __pycache__/
 *.pyo
 data/
 outputs/
+
+# Local runtime cache/temp noise control
+.cache/
+.tmp_pip/*
+!.tmp_pip/probe.txt
