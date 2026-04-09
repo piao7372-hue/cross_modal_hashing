@@ -1,0 +1,21 @@
+output:
+  processed_root: data/processed
+
+runtime:
+  device: cuda:0
+  dtype: float32
+  seed: 0
+
+mainline:
+  input_baseline: feature_cache_x_i_x_t
+  encoder:
+    order_k: 3
+    d_model: 256
+  hash_head:
+    enabled: true
+    d_hash: 64
+    shared_params: true
+    binarize_rule: sign_ge_zero_to_pos1
+  graph_side:
+    mode: disabled
+  stop_at: b
