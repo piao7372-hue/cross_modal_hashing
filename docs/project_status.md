@@ -1,5 +1,31 @@
 # Project Status
 
+## Freeze Snapshot (2026-04-09)
+1. 第二步（semantic similarity 默认主路径 `high_only`）按工程口径已完成并冻结。
+2. 三个正式数据集 full-run 均已通过 validator：
+   - `nuswide`
+   - `mirflickr25k`
+   - `mscoco`
+3. semantic similarity 当前冻结的默认正式交付为：
+   - `S2.npz`
+   - `S_high.npz`
+   - `meta.json`
+4. 第三步（跨模态对齐网络）中的 SCH-KANH 主干 `forward-only v1` 已完成并冻结：
+   - smoke 通过
+   - `mirflickr25k` full-run 通过
+   - `nuswide` full-run 通过
+   - `mscoco` full-run 通过
+5. SCH-KANH `forward-only v1` 当前冻结交付为：
+   - `Zout_I.npy`
+   - `Zout_T.npy`
+   - `meta.json`
+6. 当前尚未正式进入：
+   - `Zout -> V -> B` v2
+   - graph-side
+   - loss
+   - training
+   - evaluation
+
 ## Unified status summary (2026-04 sync)
 1. 数据清洗：已完成并冻结。
 2. 特征提取：已完成并冻结（feature cache 可用，sample order/sample_index 对齐链路已建立并保持冻结）。
@@ -13,6 +39,7 @@
 ## Current phase
 Project is currently in semantic similarity contract-closure phase on top of frozen cleaning and feature stages.
 Cleaning-only phase statements in this file are historical sub-stage records and not the current whole-project phase definition.
+Historical records below do not override the freeze snapshot above.
 Out of scope in the current phase: SCH-KANH mainline, loss, training, evaluation, end-to-end mAP validation, final best-k conclusion.
 
 ## NUS-WIDE status
