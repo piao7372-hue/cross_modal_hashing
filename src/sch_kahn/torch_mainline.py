@@ -110,9 +110,7 @@ class ShadowSharedHashHead(nn.Module):
         return TorchHashHeadOutput(v_i=v_i, v_t=v_t, b_i=b_i, b_t=b_t)
 
 
-class TrainerSmokeShadowMainline(nn.Module):
-    """Trainer-smoke-only differentiable shadow path. It must not replace the frozen numpy mainline."""
-
+class _TorchTrainingMainlineBase(nn.Module):
     def __init__(self, *, d_in: int, d_model: int, order_k: int, d_hash: int, seed: int) -> None:
         super().__init__()
         self.encoder_i = ShadowChebKANEncoder(d_in=d_in, d_model=d_model, order_k=order_k, seed=seed)
@@ -131,3 +129,11 @@ class TrainerSmokeShadowMainline(nn.Module):
             b_i=hash_out.b_i,
             b_t=hash_out.b_t,
         )
+
+
+class TrainerSmokeShadowMainline(_TorchTrainingMainlineBase):
+    """Trainer-smoke-only differentiable shadow path. It must not replace the frozen numpy mainline."""
+
+
+class SchKanhTrainingMainline(_TorchTrainingMainlineBase):
+    """Formal training mainline v1 torch path for S_final-only supervision."""

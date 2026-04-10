@@ -1,0 +1,37 @@
+contract_version: sch_kahn_evaluation_protocol_v1
+protocol_id: mscoco_val2014_unique_image_caption_same_image_v1
+
+dataset: mscoco
+
+scope:
+  canonical_only: true
+  allowed_splits:
+    - val2014
+  forbidden_splits:
+    - train2014
+    - test2014
+
+grouping:
+  image_unit: unique_image_first_sample_index
+  text_unit: unique_caption_per_row
+
+relevance:
+  rule: same_split_and_image_id
+
+empty_text:
+  allow_in_query: false
+  allow_in_database: false
+
+method_guards:
+  backbone: zout_to_v_to_b
+  supervision_target: S_final
+  forbid_supervision_matrices:
+    - S_high
+    - S_graph
+  grl_scope: zout_only
+
+report:
+  metrics:
+    - i2t_map
+    - t2i_map
+    - avg_map

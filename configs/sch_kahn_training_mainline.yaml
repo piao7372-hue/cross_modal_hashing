@@ -1,0 +1,35 @@
+output:
+  processed_root: data/processed
+  run_root: outputs/sch_kahn_training_mainline
+
+runtime:
+  device: cpu
+  dtype: float32
+  seed: 0
+
+training_mainline:
+  order_k: 3
+  d_model: 256
+  d_hash: 64
+
+optimizer:
+  name: sgd
+  lr: 0.001
+
+scheduler:
+  type: none
+
+loss_weights:
+  sem: 1.0
+  q: 1.0
+  bal: 1.0
+  grl: 1.0
+  grl_lambda: 1.0
+
+train:
+  dataset: mirflickr25k
+  feature_set_id: smoke_mir64
+  semantic_set_id: sem_smoke_mir64_supervisionready_formal_v1
+  batch_size: 8
+  num_epochs: 2
+  run_name: mirflickr25k_smoke_mir64_training_mainline_v1

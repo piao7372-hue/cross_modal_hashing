@@ -1,0 +1,23 @@
+output:
+  processed_root: data/processed
+  run_root: outputs/sch_kahn_evaluation_mainline
+
+runtime:
+  device: cpu
+  dtype: float32
+  seed: 0
+
+protocol:
+  config_path: configs/sch_kahn_evaluation_protocol_mscoco_val2014_v1.yaml
+
+model:
+  order_k: 3
+  d_model: 256
+  d_hash: 64
+
+evaluation:
+  dataset: mscoco
+  feature_set_id: full_mscoco_20260329
+  semantic_set_id: full_mscoco_supervisionready_formal_20260410
+  batch_size: 128
+  run_name: mscoco_val2014_evaluation_mainline_v1
