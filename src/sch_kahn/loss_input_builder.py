@@ -45,6 +45,19 @@ class LossBatchInputs:
     s_final_batch: sparse.csr_matrix
 
 
+def build_s_final_batch(
+    *,
+    sample_indices: np.ndarray | list[int],
+    supervision: SemanticSupervision,
+) -> sparse.csr_matrix:
+    idx = _normalize_sample_indices(sample_indices, rows=supervision.rows)
+    batch = supervision.s_final.slice_batch(idx)
+    batch_rows = int(idx.size)
+    if batch.shape != (batch_rows, batch_rows):
+        raise RuntimeError(f"S_final batch shape mismatch: got {batch.shape}, expected {(batch_rows, batch_rows)}")
+    return batch
+
+
 def build_loss_batch_inputs(
     *,
     sample_indices: np.ndarray | list[int],
@@ -64,11 +77,7 @@ def build_loss_batch_inputs(
     batch_v_t = _slice_rows(v_t, idx, name="V_T", expected_rows=supervision.rows)
     batch_b_i = _slice_rows(b_i, idx, name="B_I", expected_rows=supervision.rows)
     batch_b_t = _slice_rows(b_t, idx, name="B_T", expected_rows=supervision.rows)
-    s_final_batch = supervision.s_final.slice_batch(idx)
-
-    batch_rows = int(idx.size)
-    if s_final_batch.shape != (batch_rows, batch_rows):
-        raise RuntimeError(f"S_final batch shape mismatch: got {s_final_batch.shape}, expected {(batch_rows, batch_rows)}")
+    s_final_batch = build_s_final_batch(sample_indices=idx, supervision=supervision)
 
     return LossBatchInputs(
         sample_indices=idx,

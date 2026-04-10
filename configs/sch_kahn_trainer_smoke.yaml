@@ -1,0 +1,30 @@
+output:
+  processed_root: data/processed
+
+runtime:
+  device: cpu
+  dtype: float32
+  seed: 0
+
+shadow_mainline:
+  order_k: 3
+  d_model: 256
+  d_hash: 64
+
+optimizer:
+  name: sgd
+  lr: 0.001
+
+loss_weights:
+  sem: 1.0
+  q: 1.0
+  bal: 1.0
+  grl: 1.0
+  grl_lambda: 1.0
+
+smoke:
+  dataset: mirflickr25k
+  feature_set_id: smoke_mir64
+  semantic_set_id: sem_smoke_mir64_supervisionready_formal_v1
+  batch_size: 8
+  sample_indices: [0, 1, 2, 3, 4, 5, 6, 7]
