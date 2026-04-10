@@ -1,0 +1,35 @@
+output:
+  processed_root: data/processed
+
+runtime:
+  dtype: float32
+
+loss_side:
+  supervision_matrix: S_final
+  require_pipeline_mode: with_pseudo
+  require_entrypoint_supervision_target: S_final
+  role_map_consistency_check_if_present: true
+  global_supervision_storage: csr_float32
+  forbid_global_dense_supervision: true
+  batch_supervision_mode: global_sample_index_csr_slice
+  losses:
+    loss_sem:
+      weight: 1.0
+      formulation: cross_modal_cosine_mse_to_s_final_batch
+    loss_q:
+      weight: 1.0
+      formulation: squared_error_to_binary_code
+    loss_bal:
+      weight: 1.0
+      formulation: squared_mean_per_bit_on_v
+    loss_grl:
+      weight: 1.0
+      attach_at: zout
+      formulation: linear_logistic_domain_loss
+
+smoke:
+  dataset: mirflickr25k
+  feature_set_id: smoke_mir64
+  sch_set_id: sch_v2_smoke_mir64_b_20260409
+  semantic_set_id: sem_smoke_mir64_supervisionready_formal_v1
+  sample_indices: [0, 1, 2, 3, 4, 5, 6, 7]
