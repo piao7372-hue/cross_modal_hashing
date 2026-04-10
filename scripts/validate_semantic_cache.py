@@ -96,6 +96,12 @@ def _require_int(value: Any, field_name: str) -> int:
     raise RuntimeError(f"{field_name} must be int")
 
 
+def _require_str(value: Any, field_name: str) -> str:
+    if isinstance(value, str) and value:
+        return value
+    raise RuntimeError(f"{field_name} must be non-empty string")
+
+
 def _validate_s2_nondegenerate(s2: sparse.csr_matrix, expected_n: int) -> dict[str, float | int]:
     if s2.shape != (expected_n, expected_n):
         raise RuntimeError(f"S2 shape mismatch: expected ({expected_n}, {expected_n}), got {s2.shape}")
@@ -209,6 +215,101 @@ def _validate_two_stage_topk_edge_counts(
         "final_nnz_max": int(final_nnz_max),
         "row_nnz_min": int(np.min(row_nnz)),
         "row_nnz_max": int(np.max(row_nnz)),
+    }
+
+
+def _validate_formal_pseudo_mainline(
+    *,
+    meta: dict[str, Any],
+    s_high: sparse.csr_matrix,
+    s_pseudo: sparse.csr_matrix,
+    s_final: sparse.csr_matrix,
+) -> dict[str, Any]:
+    if meta.get("pseudo_source_mode") != "spectral_clustering":
+        raise RuntimeError("formal pseudo mainline requires pseudo_source_mode=spectral_clustering")
+    if meta.get("z_source") != "fused_projection_from_x_i_x_t":
+        raise RuntimeError("formal pseudo mainline requires z_source=fused_projection_from_x_i_x_t")
+    if meta.get("projection_mode") != "shared_linear_tanh":
+        raise RuntimeError("formal pseudo mainline requires projection_mode=shared_linear_tanh")
+    if meta.get("fusion_mode") != "arithmetic_mean":
+        raise RuntimeError("formal pseudo mainline requires fusion_mode=arithmetic_mean")
+    if meta.get("affinity_builder") != "sparse_knn_cosine":
+        raise RuntimeError("formal pseudo mainline requires affinity_builder=sparse_knn_cosine")
+    if meta.get("laplacian_type") != "symmetric_normalized":
+        raise RuntimeError("formal pseudo mainline requires laplacian_type=symmetric_normalized")
+    if meta.get("clustering_method") != "spectral_kmeans":
+        raise RuntimeError("formal pseudo mainline requires clustering_method=spectral_kmeans")
+    if meta.get("s_pseudo_storage") != "csr_sparse_on_pseudo_support":
+        raise RuntimeError("formal pseudo mainline requires s_pseudo_storage=csr_sparse_on_pseudo_support")
+    if meta.get("s_final_storage") != "csr_sparse_on_union_support":
+        raise RuntimeError("formal pseudo mainline requires s_final_storage=csr_sparse_on_union_support")
+
+    pseudo_dims = meta.get("pseudo_dims")
+    if not isinstance(pseudo_dims, dict):
+        raise RuntimeError("formal pseudo mainline requires meta.pseudo_dims")
+    dim_x_i = _require_int(pseudo_dims.get("x_i"), "meta.pseudo_dims.x_i")
+    dim_x_t = _require_int(pseudo_dims.get("x_t"), "meta.pseudo_dims.x_t")
+    dim_z = _require_int(pseudo_dims.get("z"), "meta.pseudo_dims.z")
+    if dim_x_i != dim_x_t:
+        raise RuntimeError("shared_linear_tanh mainline requires meta.pseudo_dims.x_i == meta.pseudo_dims.x_t")
+    if dim_z <= 0:
+        raise RuntimeError("meta.pseudo_dims.z must be > 0")
+
+    affinity_k = _require_int(meta.get("affinity_k"), "meta.affinity_k")
+    n_clusters = _require_int(meta.get("n_clusters"), "meta.n_clusters")
+    pseudo_seed = _require_int(meta.get("pseudo_seed"), "meta.pseudo_seed")
+    if n_clusters <= 1 or n_clusters >= s_high.shape[0]:
+        raise RuntimeError("formal pseudo mainline requires 1 < n_clusters < rows")
+    if meta.get("entrypoints", {}).get("supervision_target") != "S_final":
+        raise RuntimeError("formal pseudo mainline must set entrypoints.supervision_target = S_final")
+
+    if s_pseudo.nnz <= 0:
+        raise RuntimeError("formal pseudo mainline requires non-empty S_pseudo")
+    if not np.all(np.isfinite(s_pseudo.data)):
+        raise RuntimeError("S_pseudo contains non-finite values")
+    if np.any(np.abs(s_pseudo.data - 1.0) > 1.0e-6):
+        raise RuntimeError("formal pseudo mainline requires S_pseudo data values to be 1 on pseudo support")
+    diag = s_pseudo.diagonal()
+    if diag.shape[0] != s_pseudo.shape[0] or np.any(diag <= 0):
+        raise RuntimeError("formal pseudo mainline requires positive self-loop on every S_pseudo row")
+
+    n = s_pseudo.shape[0]
+    k_eff = min(affinity_k, n)
+    pseudo_nnz_max = n * min(n, (2 * k_eff) + 1)
+    if s_pseudo.nnz > pseudo_nnz_max:
+        raise RuntimeError(
+            f"S_pseudo.nnz exceeds sparse pseudo-support bound: {s_pseudo.nnz} > {pseudo_nnz_max}"
+        )
+    if s_final.nnz > int(s_high.nnz + s_pseudo.nnz):
+        raise RuntimeError(
+            f"S_final.nnz exceeds union-support upper bound: {s_final.nnz} > {int(s_high.nnz + s_pseudo.nnz)}"
+        )
+
+    pseudo_label_count = _require_int(meta.get("pseudo_label_count"), "meta.pseudo_label_count")
+    if pseudo_label_count <= 0 or pseudo_label_count > n_clusters:
+        raise RuntimeError("meta.pseudo_label_count must be in [1, n_clusters]")
+
+    return {
+        "path_validation": "formal_mainline_pass",
+        "affinity_k": int(affinity_k),
+        "n_clusters": int(n_clusters),
+        "pseudo_seed": int(pseudo_seed),
+        "pseudo_nnz_max": int(pseudo_nnz_max),
+        "pseudo_label_count": int(pseudo_label_count),
+        "dim_x_i": int(dim_x_i),
+        "dim_x_t": int(dim_x_t),
+        "dim_z": int(dim_z),
+    }
+
+
+def _validate_compat_external_matrix(meta: dict[str, Any]) -> dict[str, Any]:
+    if meta.get("pseudo_source_mode") != "external_matrix":
+        raise RuntimeError("compat pseudo path requires pseudo_source_mode=external_matrix")
+    _require_str(meta.get("external_matrix_path"), "meta.external_matrix_path")
+    if meta.get("entrypoints", {}).get("supervision_target") != "S_final":
+        raise RuntimeError("compat external_matrix path must set entrypoints.supervision_target = S_final")
+    return {
+        "path_validation": "compat_external_matrix_pass",
     }
 
 
@@ -334,9 +435,22 @@ def main() -> int:
 
         if meta.get("entrypoints", {}).get("supervision_target") != "S_final":
             raise RuntimeError("with_pseudo mode must set entrypoints.supervision_target = S_final")
+        pseudo_source_mode = meta.get("pseudo_source_mode")
+        if pseudo_source_mode == "spectral_clustering":
+            pseudo_path_stats = _validate_formal_pseudo_mainline(
+                meta=meta,
+                s_high=s_high,
+                s_pseudo=s_pseudo,
+                s_final=s_final,
+            )
+        elif pseudo_source_mode == "external_matrix":
+            pseudo_path_stats = _validate_compat_external_matrix(meta)
+        else:
+            raise RuntimeError("with_pseudo mode requires pseudo_source_mode to be spectral_clustering or external_matrix")
     else:
         if meta.get("entrypoints", {}).get("supervision_target") != "unavailable":
             raise RuntimeError("high_only mode must set entrypoints.supervision_target = unavailable")
+        pseudo_path_stats = {"path_validation": "high_only_no_supervision_target"}
 
     propagation_graph_entry = meta.get("entrypoints", {}).get("propagation_graph")
     if has_s_graph:
@@ -375,8 +489,16 @@ def main() -> int:
             "s_graph_symmetry_ok": True if has_s_graph else "skipped",
             "s_graph_nonnegative_ok": True if has_s_graph else "skipped",
             "s_graph_self_loop_ok": True if has_s_graph else "skipped",
+            "pseudo_path_validation": pseudo_path_stats["path_validation"],
         },
     }
+    if pipeline_mode == "with_pseudo":
+        result["density"]["S_pseudo"] = _density(s_pseudo)
+        result["density"]["S_final"] = _density(s_final)
+        result["avg_degree"]["S_pseudo"] = _avg_degree(s_pseudo)
+        result["avg_degree"]["S_final"] = _avg_degree(s_final)
+        result["row_sum_stats"]["S_final"] = _row_sum_stats(s_final)
+        result["pseudo_path_validation"] = pseudo_path_stats
     if has_s_graph and s_graph is not None:
         result["density"]["S_graph"] = _density(s_graph)
         result["avg_degree"]["S_graph"] = _avg_degree(s_graph)

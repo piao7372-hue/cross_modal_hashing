@@ -10,11 +10,19 @@ Out of scope:
 1. This contract is a semantic-stage contract document; it does not redefine cleaning/feature stages.
 2. Current implementation status must be judged by repository code/config and validator behavior first.
 3. If any historical note conflicts with current code/config behavior, code/config behavior is authoritative.
-4. Repository default active path is `pipeline_mode=high_only` with formal outputs:
-5. `S2.npz`
-6. `S_high.npz`
-7. `meta.json`
-8. `with_pseudo` is a reserved optional path and is not the default active path in current config.
+4. Frozen baseline default config is:
+5. `configs/semantic_similarity.yaml`
+6. with default mode:
+7. `pipeline_mode=high_only`
+8. Supervision-ready formal mainline config is explicit and separate:
+9. `configs/semantic_similarity_supervision_ready.yaml`
+10. Formal semantic outputs in `with_pseudo` are:
+11. `S2.npz`
+12. `S_high.npz`
+13. `S_pseudo.npz`
+14. `S_final.npz`
+15. `meta.json`
+16. `high_only` remains the frozen baseline path without pseudo supervision outputs.
 
 ## Input Contract
 1. Engineering inputs are `X_I` and `X_T` from feature cache.
@@ -98,6 +106,26 @@ Meta requirements:
 3. `entrypoints.propagation_graph = S_graph` only when compatibility graph output is enabled and `S_graph.npz` is saved
 4. otherwise `entrypoints.propagation_graph = unavailable`
 5. include pseudo-source fields (for example `pseudo_source_mode`, `z_source`, `clustering_method`, `n_clusters`, `pseudo_seed`)
+
+Formal mainline path:
+1. `pseudo_source_mode = spectral_clustering`
+2. `z_source = fused_projection_from_x_i_x_t`
+3. `projection_mode = shared_linear_tanh`
+4. `fusion_mode = arithmetic_mean`
+5. `affinity_builder = sparse_knn_cosine`
+6. `laplacian_type = symmetric_normalized`
+7. `clustering_method = spectral_kmeans`
+8. `S_pseudo` semantic definition remains same-cluster=1 / different-cluster=0
+9. `S_pseudo` engineering storage is CSR sparse matrix on pseudo support
+10. `S_final` engineering storage is CSR sparse matrix on `support(S_high) ∪ support(S_pseudo)`
+11. `entrypoints.supervision_target = S_final` is mandatory
+12. formal-mainline validator result is `formal_mainline_pass`
+
+Compatibility-only path:
+1. `pseudo_source_mode = external_matrix`
+2. `external_matrix_path` is allowed only as compat/debug input
+3. compat/debug path must not be documented as the formal pseudo mainline
+4. compat/debug validator result is `compat_external_matrix_pass`
 
 Fail-fast rule:
 If pseudo source is unconfigured/incomplete, `with_pseudo` must fail fast before semantic cache outputs are written.

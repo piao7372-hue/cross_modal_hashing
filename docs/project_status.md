@@ -42,6 +42,29 @@ Cleaning-only phase statements in this file are historical sub-stage records and
 Historical records below do not override the freeze snapshot above.
 Out of scope in the current phase: SCH-KANH mainline, loss, training, evaluation, end-to-end mAP validation, final best-k conclusion.
 
+## Semantic Supervision-Ready Status (2026-04-10)
+1. Frozen baseline default entry remains `high_only`.
+2. Supervision-ready semantic mainline is enabled only through the explicit config:
+   - `configs/semantic_similarity_supervision_ready.yaml`
+3. Supervision-ready formal mainline deliverables are:
+   - `S2.npz`
+   - `S_high.npz`
+   - `S_pseudo.npz`
+   - `S_final.npz`
+   - `meta.json`
+4. `S_final` is the only supervision target in the supervision-ready path.
+5. `S_high` remains a semantic candidate matrix and is not the final supervision matrix.
+6. `S_graph` remains a propagation-graph artifact only and is not a supervision matrix.
+7. Full-run formal mainline validation has passed on:
+   - `mirflickr25k`
+   - `nuswide`
+   - `mscoco`
+8. All three datasets produced `S_pseudo.npz`, `S_final.npz`, and `meta.json`, and validator result is `formal_mainline_pass`.
+9. Engineering notes from the full-run round:
+   - `nuswide` hit a tight command timeout budget, but outputs were fully written and validator still passed.
+   - `mscoco` is an hours-scale formal mainline job.
+10. This supervision-ready completion does not start graph-side, SCH-KANH training, `H / L_hat`, loss, training, or evaluation.
+
 ## NUS-WIDE status
 NUS-WIDE cleaning is completed and frozen.
 Rule: do not modify NUS-WIDE cleaning logic unless a clear bug is found.

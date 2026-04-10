@@ -53,6 +53,12 @@ class SemanticConfig:
 class PseudoConfig:
     source_mode: str
     z_source: str
+    projection_mode: str
+    fusion_mode: str
+    z_dim: int | None
+    affinity_builder: str
+    affinity_k: int | None
+    laplacian_type: str
     clustering_method: str
     n_clusters: int | None
     pseudo_seed: int
@@ -232,6 +238,12 @@ def load_semantic_similarity_config(project_root: Path, config_path: Path) -> Se
     pseudo = PseudoConfig(
         source_mode=_as_str(pseudo_raw.get("source_mode"), "pseudo.source_mode"),
         z_source=_as_str(pseudo_raw.get("z_source"), "pseudo.z_source"),
+        projection_mode=_as_str(pseudo_raw.get("projection_mode"), "pseudo.projection_mode"),
+        fusion_mode=_as_str(pseudo_raw.get("fusion_mode"), "pseudo.fusion_mode"),
+        z_dim=_as_optional_int(pseudo_raw.get("z_dim"), "pseudo.z_dim"),
+        affinity_builder=_as_str(pseudo_raw.get("affinity_builder"), "pseudo.affinity_builder"),
+        affinity_k=_as_optional_int(pseudo_raw.get("affinity_k"), "pseudo.affinity_k"),
+        laplacian_type=_as_str(pseudo_raw.get("laplacian_type"), "pseudo.laplacian_type"),
         clustering_method=_as_str(pseudo_raw.get("clustering_method"), "pseudo.clustering_method"),
         n_clusters=_as_optional_int(pseudo_raw.get("n_clusters"), "pseudo.n_clusters"),
         pseudo_seed=_as_int(pseudo_raw.get("pseudo_seed"), "pseudo.pseudo_seed"),
@@ -239,6 +251,33 @@ def load_semantic_similarity_config(project_root: Path, config_path: Path) -> Se
             pseudo_raw.get("external_matrix_path"), "pseudo.external_matrix_path", project_root
         ),
     )
+
+    if pseudo.source_mode not in {"unconfigured", "spectral_clustering", "external_matrix"}:
+        raise ValueError(
+            "pseudo.source_mode must be `unconfigured`, `spectral_clustering`, or `external_matrix`"
+        )
+    if pseudo.source_mode == "spectral_clustering":
+        if pseudo.z_source != "fused_projection_from_x_i_x_t":
+            raise ValueError("spectral_clustering mainline requires z_source=fused_projection_from_x_i_x_t")
+        if pseudo.projection_mode != "shared_linear_tanh":
+            raise ValueError("spectral_clustering mainline requires projection_mode=shared_linear_tanh")
+        if pseudo.fusion_mode != "arithmetic_mean":
+            raise ValueError("spectral_clustering mainline requires fusion_mode=arithmetic_mean")
+        if pseudo.z_dim is None or pseudo.z_dim <= 0:
+            raise ValueError("spectral_clustering mainline requires pseudo.z_dim > 0")
+        if pseudo.affinity_builder != "sparse_knn_cosine":
+            raise ValueError("spectral_clustering mainline requires affinity_builder=sparse_knn_cosine")
+        if pseudo.affinity_k is None or pseudo.affinity_k <= 0:
+            raise ValueError("spectral_clustering mainline requires pseudo.affinity_k > 0")
+        if pseudo.laplacian_type != "symmetric_normalized":
+            raise ValueError("spectral_clustering mainline requires laplacian_type=symmetric_normalized")
+        if pseudo.clustering_method != "spectral_kmeans":
+            raise ValueError("spectral_clustering mainline requires clustering_method=spectral_kmeans")
+        if pseudo.n_clusters is None or pseudo.n_clusters <= 1:
+            raise ValueError("spectral_clustering mainline requires pseudo.n_clusters > 1")
+    if pseudo.source_mode == "external_matrix":
+        if pseudo.external_matrix_path is None:
+            raise ValueError("external_matrix source_mode requires pseudo.external_matrix_path")
 
     validation = ValidationConfig(
         row_sum_atol=_as_float(validation_raw.get("row_sum_atol"), "validation.row_sum_atol"),

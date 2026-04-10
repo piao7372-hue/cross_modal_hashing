@@ -1,4 +1,4 @@
-﻿output:
+output:
   processed_root: data/processed
 
 runtime:
@@ -12,7 +12,7 @@ runtime:
 
 semantic:
   formula_version: semantic_similarity_v2_dual_matrix
-  pipeline_mode: high_only
+  pipeline_mode: with_pseudo
   # debug_save_intermediates controls extra diagnostics only; formal outputs are always saved.
   debug_save_intermediates: false
   # Compatibility-only output switch; default semantic-only path does not save S_graph.
@@ -39,16 +39,16 @@ semantic:
       k_final: 200
 
 pseudo:
-  source_mode: unconfigured
-  z_source: unresolved
-  projection_mode: unresolved
-  fusion_mode: unresolved
-  z_dim: null
-  affinity_builder: unresolved
-  affinity_k: null
-  laplacian_type: unresolved
-  clustering_method: unresolved
-  n_clusters: null
+  source_mode: spectral_clustering
+  z_source: fused_projection_from_x_i_x_t
+  projection_mode: shared_linear_tanh
+  fusion_mode: arithmetic_mean
+  z_dim: 64
+  affinity_builder: sparse_knn_cosine
+  affinity_k: 20
+  laplacian_type: symmetric_normalized
+  clustering_method: spectral_kmeans
+  n_clusters: 8
   pseudo_seed: 0
   external_matrix_path: null
 

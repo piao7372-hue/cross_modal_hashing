@@ -93,7 +93,7 @@ def run_semantic_similarity(
     pseudo_result: PseudoBuildResult | None = None
     if config.semantic.pipeline_mode == "with_pseudo":
         # Fail-fast for with_pseudo mode before writing any semantic outputs.
-        pseudo_result = pseudo_builder.build(expected_rows=features.rows)
+        pseudo_result = pseudo_builder.build(features=features, runtime_cfg=config.runtime)
 
     graph_result = build_graph_matrices(
         x_i=features.x_i,
@@ -179,6 +179,11 @@ def run_semantic_similarity(
         stats_obj["s_graph_nnz"] = graph_result.stats.get("s_graph_nnz")
         stats_obj["density"]["S_graph"] = density_of(matrices["S_graph"])
         stats_obj["avg_degree"]["S_graph"] = avg_degree_of(matrices["S_graph"])
+    if config.semantic.pipeline_mode == "with_pseudo":
+        stats_obj["density"]["S_pseudo"] = density_of(matrices["S_pseudo"])
+        stats_obj["density"]["S_final"] = density_of(matrices["S_final"])
+        stats_obj["avg_degree"]["S_pseudo"] = avg_degree_of(matrices["S_pseudo"])
+        stats_obj["avg_degree"]["S_final"] = avg_degree_of(matrices["S_final"])
 
     meta: dict[str, Any] = {
         "contract_version": "semantic_cache_v1",
